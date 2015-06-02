@@ -1,6 +1,6 @@
 {
     "name": "m1ke/easy-sql",
-    "description": "Expands Aura's ExtendedPdo to add database manipulation helpers and persistent connections",
+    "description": "Builds on Aura's ExtendedPdo to add database manipulation helpers and persistent connections",
     "license": "BSD-2-Clause",
     "authors": [
         {
