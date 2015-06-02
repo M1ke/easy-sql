@@ -12,7 +12,7 @@ use PDOException as PDOException;
  * @package M1ke.Sql
  *
  */
-class PersistentPdo
+class PersistPdo
 {
 	private static $db;
 	private static $allow_reset = true;
