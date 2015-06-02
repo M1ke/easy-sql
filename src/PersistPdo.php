@@ -83,7 +83,7 @@ class PersistPdo
 				self::$allow_reset = false;
 				self::$name(...$args);
 			}
-			self::log('PDO encountered an error when executing "'.$name.'": '.$error);
+			self::log('PDO encountered an error when executing "'.$name.'": '.$error, true);
 		}
 	}
 
