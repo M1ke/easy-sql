@@ -20,7 +20,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 		return $this->lastInsertId();
 	}
 
-	public function queryUpdate($table_name, $$query, Array $params, Array $exclude_keys = []){
+	public function queryUpdate($table_name, $query, Array $params, Array $exclude_keys = []){
 		$query_update = self::makeQueryInsert($params, $exclude_keys);
 		$query = str_replace("SET :params", "SET $query_update", $query);
 		$query = "UPDATE $table_name $query";
