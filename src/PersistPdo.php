@@ -60,8 +60,8 @@ class PersistPdo
 			$class_name = self::$class;
 			$config = self::$config;
 
-			$db = new $class_name($config['type'].':host='.$config['server'].';dbname='.$config['db'],
-				$config['user'], $config['pass'], [], self::$attributes);
+			$db = new $class_name($config['db'], $config['user'], $config['pass'],
+				self::$attributes, $config['type'], $config['server']);
 
 			if ($db instanceof PDO===false){
 				self::log('No PDO object could be created.', true);

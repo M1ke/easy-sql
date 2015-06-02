@@ -14,6 +14,11 @@ use Aura\Sql\Exception;
  */
 class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 {
+	public function __construct($db, $user, $pass, array $options = [], $type = 'mysql', $server = 'localhost'){
+		$dsn = $type.':host='.$server.';dbname='.$db;
+		parent::__construct($dsn, $user, $pass, $options);
+	}
+
 	public function queryInsert($table_name, Array $params, Array $exclude_keys = []){
 		$query = "INSERT INTO `$table_name` ".self::makeQueryInsert($params, $exclude_keys);
 		$this->perform($query, $params);
