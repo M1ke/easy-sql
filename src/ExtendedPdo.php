@@ -14,14 +14,15 @@ use Aura\Sql\Exception;
  */
 class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 {
-	public function queryInsert($db_name, Array $params, Array $exclude_keys = []){
-		$query = "INSERT INTO `$db_name` ".self::makeQueryInsert($params, $exclude_keys);
+	public function queryInsert($table_name, Array $params, Array $exclude_keys = []){
+		$query = "INSERT INTO `$table_name` ".self::makeQueryInsert($params, $exclude_keys);
 		return $this->perform($query, $params);
 	}
 
-	public function queryUpdate($query, Array $params, Array $exclude_keys = []){
+	public function queryUpdate($table_name, $$query, Array $params, Array $exclude_keys = []){
 		$query_update = self::makeQueryInsert($params, $exclude_keys);
-		$query = str_replace("SET ", "SET $query_update", $query);
+		$query = str_replace("SET :params", "SET $query_update", $query);
+		$query = "UPDATE $table_name $query";
 		return $this->perform($query, $params);
 	}
 

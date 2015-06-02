@@ -17,6 +17,7 @@ class PersistentPdo
 	private static $db;
 	private static $allow_reset = true;
 	private static $log = [];
+	private static $config = [];
 
 	protected static $class = '\\M1ke\\Sql\\ExtendedPdo';
 	protected static $attributes = [
@@ -29,6 +30,16 @@ class PersistentPdo
 
 	public static function setAttribute($name, $value){
 		self::$attributes[$name] = $value;
+	}
+
+	public static function setConfig($db, $user, $pass, $type = 'mysql', $server = 'localhost'){
+		$config = [
+			'db'=> $db,
+			'user'=> $user,
+			'pass'=> $pass,
+			'type'=> $type,
+			'server'=> $server,
+		];
 	}
 
 	protected static function log($msg, $error = false){
@@ -46,7 +57,8 @@ class PersistentPdo
 		try {
 			self::log('Create new instance');
 			$class_name = self::$class;
-			$db = new $class_name(SQL_TYPE.':host='.SQL_SERVER.';dbname='.SQL_DB, SQL_USER, SQL_PASS, [], self::$attributes);
+			$config = self::$config;
+			$db = new $class_name($config['type'].':host='.$config['server'].';dbname='.$config['db'], $config['user'], $config['pass'], [], self::$attributes);
 			if ($db instanceof PDO===false){
 				self::log('No PDO object could be created.', true);
 			}
