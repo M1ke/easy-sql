@@ -33,7 +33,7 @@ class PersistPdo
 	}
 
 	public static function setConfig($db, $user, $pass, $type = 'mysql', $server = 'localhost'){
-		$config = [
+		self::$config = [
 			'db'=> $db,
 			'user'=> $user,
 			'pass'=> $pass,
