@@ -80,10 +80,25 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 		return $value;
 	}
 
-	public function queryInsert($table_name, Array $values, Array $exclude_keys = []){
-		$query = "INSERT INTO `$table_name` ".self::makeQueryInsert($values, $exclude_keys);
+	/**
+	 *
+	 * Performs a query and then returns the last inserted ID
+	 *
+	 * @param string $query The SQL statement to prepare and execute.
+	 *
+	 * @param array $values Values to bind to the query.
+	 *
+	 * @return integer
+	 *
+	 */
+	public function performId($query, $values){
 		$this->perform($query, $values);
 		return $this->lastInsertId();
+	}
+
+	public function queryInsert($table_name, Array $values, Array $exclude_keys = []){
+		$query = "INSERT INTO `$table_name` ".self::makeQueryInsert($values, $exclude_keys);
+		return $this->performId($query, $values);
 	}
 
 	public function queryUpdate($table_name, $query, Array $values, Array $exclude_keys = []){
