@@ -5,7 +5,7 @@ An extension to [Aura.Sql](https://github.com/auraphp/Aura.Sql) which simplifies
 ### Use
 
 ```php
-use \M1ke\Sql\ExtendedPdo;
+use M1ke\Sql\ExtendedPdo;
 
 $pdo = new ExtendedPdo('database', 'user', 'pass');
 $user_id = $pdo->queryInsert('users', ['name'=>'Foo', 'email'=>'foo@bar.com']);
@@ -17,7 +17,7 @@ $affected_rows = $pdo->queryUpdate('users', "SET :params WHERE user_id={$user_id
 For real time applications simply run methods on the static `PersistPdo` object:
 
 ```php
-use \M1ke\Sql\PersistPdo;
+use M1ke\Sql\PersistPdo;
 
 PersistPdo::setConfig('database', 'user', 'pass');
 PersistPdo::fetchOne("SELECT * FROM users WHERE user_id = 1");
