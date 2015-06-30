@@ -74,7 +74,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
      * @return string
      *
      */
-	public function fetchSingle(...$args){
+	public function fetchField(...$args){
 		$data = $this->fetchOne(...$args);
 		$value = is_array($data) ? reset($data) : '';
 		return $value;
