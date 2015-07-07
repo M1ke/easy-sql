@@ -20,6 +20,18 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 		parent::__construct($dsn, $user, $pass, $options);
 	}
 
+	protected function fetchAllWithCallable(...$args){
+		$args = func_get_args();
+		$return = parent::fetchAllWithCallable(...$args);
+		return is_array($return) ? $return : [];
+	}
+
+	public function fetchOne($statement, array $values = []){
+		$args = func_get_args();
+		$return = parent::fetchOne(...$args);
+		return is_array($return) ? $return : [];
+	}
+
 	/**
 	 *
 	 * Fetches an associative array of rows from the database; the rows
