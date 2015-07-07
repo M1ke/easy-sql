@@ -153,7 +153,6 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
         	$sth->execute();
         }
         catch (PDOException $e){
-        	echo get_class($e);
         	throw new Exception($e->getMessage(), $sth->queryString);
         }
         $this->endProfile($statement, $values);
