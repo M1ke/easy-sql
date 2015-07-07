@@ -3,7 +3,6 @@ namespace M1ke\Sql;
 
 use Aura\Sql\ExtendedPdo as AuraPdo;
 use Aura\Sql\ExtendedPdoInterface;
-use Aura\Sql\Exception;
 
 /**
  *
