@@ -131,4 +131,18 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 		list($query) = self::makeQueryValues('update', $values, $exclude_keys);
 		return implode(',', $query);
 	}
+
+	public function perform($statement, array $values = []){
+        $sth = $this->prepareWithValues($statement, $values);
+        $this->beginProfile(__FUNCTION__);
+        try {
+        	$sth->execute();
+        }
+        catch (PDOException $e){
+        	echo get_class($e);
+        	throw new Exception($e->getMessage(), $sth->$queryString);
+        }
+        $this->endProfile($statement, $values);
+        return $sth;
+    }
 }
