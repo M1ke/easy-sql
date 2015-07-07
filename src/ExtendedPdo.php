@@ -4,6 +4,8 @@ namespace M1ke\Sql;
 use Aura\Sql\ExtendedPdo as AuraPdo;
 use Aura\Sql\ExtendedPdoInterface;
 
+use PDOException;
+
 /**
  *
  * Expands Aura's ExtendedPdo to add database manipulation helpers
@@ -140,7 +142,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
         }
         catch (PDOException $e){
         	echo get_class($e);
-        	throw new Exception($e->getMessage(), $sth->$queryString);
+        	throw new Exception($e->getMessage(), $sth->queryString);
         }
         $this->endProfile($statement, $values);
         return $sth;
