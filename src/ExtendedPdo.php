@@ -29,7 +29,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 		}
 	}
 
-	protected function fetchAllWithCallable(...$args){
+	protected function fetchAllWithCallable($fetch_type, $statement, array $values = array(), $callable = null){
 		$args = func_get_args();
 		$return = parent::fetchAllWithCallable(...$args);
 		return is_array($return) ? $return : [];
