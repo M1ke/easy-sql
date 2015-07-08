@@ -20,6 +20,15 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 		parent::__construct($dsn, $user, $pass, $options);
 	}
 
+	protected function excludeKeys(Array $values, Array $exclude_keys){
+		$include_keys = array_keys($values);
+		foreach ($include_keys as $n => $key){
+			if (in_array($key, $exclude_keys)){
+				unset($include_keys[$n]);
+			}
+		}
+	}
+
 	protected function fetchAllWithCallable(...$args){
 		$args = func_get_args();
 		$return = parent::fetchAllWithCallable(...$args);
@@ -109,30 +118,40 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 		return $this->lastInsertId();
 	}
 
-	public function queryInsert($table_name, Array $values, Array $exclude_keys = []){
-		$query = "INSERT INTO `$table_name` ".self::makeQueryInsert($values, $exclude_keys);
+	public function queryInsert($table_name, Array $values, Array $include_keys){
+		$query = "INSERT INTO `$table_name` ".self::makeQueryInsert($values, $include_keys);
 		return $this->performId($query, $values);
 	}
 
-	public function queryUpdate($table_name, $where, Array $values, Array $exclude_keys = []){
-		$query_update = self::makeQueryUpdate($values, $exclude_keys);
+	public function queryInsertExc($table_name, Array $values, Array $exclude_keys = []){
+		$include_keys = $this->excludeKeys($values, $exclude_keys);
+		return $this->queryInsert($table_name, $values, $include_keys);
+	}
+
+	public function queryUpdate($table_name, $where, Array $values, Array $include_keys){
+		$query_update = self::makeQueryUpdate($values, $include_keys);
 		$query = "UPDATE $table_name SET $query_update WHERE $where";
 		return $this->fetchAffected($query, $values);
 	}
 
-	private static function makeQueryInsert(Array $values, Array $exclude_keys = []){
-		list($fields, $vals) = self::makeQueryValues('insert', $values, $exclude_keys);
+	public function queryUpdateExc($table_name, $where, Array $values, Array $exclude_keys = []){
+		$include_keys = $this->excludeKeys($values, $exclude_keys);
+		return queryUpdate($table_name, $where, $values, $include_keys);
+	}
+
+	private static function makeQueryInsert(Array $values, Array $include_keys){
+		list($fields, $vals) = self::makeQueryValues('insert', $values, $include_keys);
 		$vals = "(".implode(',', $vals).")";
 		return "(".implode(',', $fields).") VALUES $vals";
 	}
 
-	public static function makeQueryValues($type, Array $values, Array $exclude_keys = []){
-		foreach ($values as $key => $val){
+	public static function makeQueryValues($type, Array $values, Array $include_keys){
+		foreach ($include_keys as $key){
+			$val = $values[$key];
 			$value_isnt_false = $val!==false;
 			$key_has_no_dash = !in_string('-', $key);
-			$key_isnt_excluded = !in_array($key, $exclude_keys);
 			$value_isnt_array = !is_array($val);
-			if ($value_isnt_false && $key_has_no_dash && $key_isnt_excluded && $value_isnt_array){
+			if ($value_isnt_false && $key_has_no_dash && $value_isnt_array){
 				$val = is_null($val) ? "''" : ":$key";
 				$fields[] = $type==='update' ? "`$key`=$val" : "`$key`";
 				$vals[] = $val;
@@ -141,8 +160,8 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 		return [$fields, $vals];
 	}
 
-	private static function makeQueryUpdate(Array $values, Array $exclude_keys = []){
-		list($query) = self::makeQueryValues('update', $values, $exclude_keys);
+	private static function makeQueryUpdate(Array $values, Array $include_keys){
+		list($query) = self::makeQueryValues('update', $values, $include_keys);
 		return implode(',', $query);
 	}
 
