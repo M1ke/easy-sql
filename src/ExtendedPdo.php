@@ -131,16 +131,21 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 	}
 
 	public function queryUpdate($table_name, $where, Array $values, Array $include_keys){
-		list($query_update, $values) = self::makeQueryUpdate($values, $include_keys);
-		$where_query = $this->whereQuery($where);
-		// if (is_array($where)){
-			$values = array_merge($values, $where);
-		// }
-		$query = "UPDATE $table_name SET $query_update WHERE $where_query";
+		list($query, $values) = self::getQueryUpdate($table_name, $where, $values, $include_keys);
 		return $this->fetchAffected($query, $values);
 	}
 
-	public function whereQuery($where){
+	public static function makeQueryUpdate($table_name, $where, Array $values, Array $include_keys){
+		list($query_update, $values) = self::makeQueryUpdateComponents($values, $include_keys);
+		$where_query = self::whereQuery($where);
+		if (is_array($where)){
+			$values = array_merge($values, $where);
+		}
+		$query = "UPDATE $table_name SET $query_update WHERE $where_query";
+		return [$query, $values];
+	}
+
+	public static function whereQuery($where){
 		if (is_array($where)){
 			$where_keys = array_keys($where);
 			$where_keys = array_map(function($key){
@@ -160,13 +165,13 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 		return $this->queryUpdate($table_name, $where, $values, $include_keys);
 	}
 
-	private static function makeQueryInsert(Array $values, Array $include_keys){
+	public static function makeQueryInsert(Array $values, Array $include_keys){
 		list($fields, $placeholders, $vals) = self::makeQueryValues('insert', $values, $include_keys);
 		$query = "(".implode(', ', $fields).") VALUES (".implode(',', $placeholders).")";
 		return [$query, $vals];
 	}
 
-	private static function makeQueryUpdate(Array $values, Array $include_keys){
+	public static function makeQueryUpdateComponents(Array $values, Array $include_keys){
 		list($fields, $placeholders, $vals) = self::makeQueryValues('update', $values, $include_keys);
 		$query = implode(', ', $fields);
 		return [$query, $vals];
@@ -177,7 +182,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 		foreach ($include_keys as $key){
 			$val = $values[$key];
 			$value_isnt_false = $val!==false;
-			$key_has_no_dash = !in_string('-', $key);
+			$key_has_no_dash = strpos($key, '-')===false;
 			$value_isnt_array = !is_array($val);
 			if ($value_isnt_false && $key_has_no_dash && $value_isnt_array){
 				$placeholder = ":$key";
