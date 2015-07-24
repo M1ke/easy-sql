@@ -27,6 +27,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 				unset($include_keys[$n]);
 			}
 		}
+		return $include_keys;
 	}
 
 	protected function fetchAllWithCallable($fetch_type, $statement, array $values = array(), $callable = null){
@@ -114,12 +115,13 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 	 *
 	 */
 	public function performId($query, $values){
-		$this->perform($query, $values);
+		$this->perform($query, $values, true);
 		return $this->lastInsertId();
 	}
 
 	public function queryInsert($table_name, Array $values, Array $include_keys){
-		$query = "INSERT INTO `$table_name` ".self::makeQueryInsert($values, $include_keys);
+		list($query, $values) = self::makeQueryInsert($values, $include_keys);
+		$query = "INSERT INTO `$table_name` ".$query;
 		return $this->performId($query, $values);
 	}
 
@@ -129,40 +131,62 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 	}
 
 	public function queryUpdate($table_name, $where, Array $values, Array $include_keys){
-		$query_update = self::makeQueryUpdate($values, $include_keys);
-		$query = "UPDATE $table_name SET $query_update WHERE $where";
+		list($query_update, $values) = self::makeQueryUpdate($values, $include_keys);
+		$where_query = $this->whereQuery($where);
+		// if (is_array($where)){
+			$values = array_merge($values, $where);
+		// }
+		$query = "UPDATE $table_name SET $query_update WHERE $where_query";
 		return $this->fetchAffected($query, $values);
+	}
+
+	public function whereQuery($where){
+		if (is_array($where)){
+			$where_keys = array_keys($where);
+			$where_keys = array_map(function($key){
+				$key = trim($key);
+				return "$key = :$key";
+			}, $where_keys);
+			$where_query = implode(' and ', $where_keys);
+		}
+		else {
+			$where_query = $where;
+		}
+		return $where_query;
 	}
 
 	public function queryUpdateExc($table_name, $where, Array $values, Array $exclude_keys = []){
 		$include_keys = $this->excludeKeys($values, $exclude_keys);
-		return queryUpdate($table_name, $where, $values, $include_keys);
+		return $this->queryUpdate($table_name, $where, $values, $include_keys);
 	}
 
 	private static function makeQueryInsert(Array $values, Array $include_keys){
-		list($fields, $vals) = self::makeQueryValues('insert', $values, $include_keys);
-		$vals = "(".implode(',', $vals).")";
-		return "(".implode(',', $fields).") VALUES $vals";
+		list($fields, $placeholders, $vals) = self::makeQueryValues('insert', $values, $include_keys);
+		$query = "(".implode(', ', $fields).") VALUES (".implode(',', $placeholders).")";
+		return [$query, $vals];
+	}
+
+	private static function makeQueryUpdate(Array $values, Array $include_keys){
+		list($fields, $placeholders, $vals) = self::makeQueryValues('update', $values, $include_keys);
+		$query = implode(', ', $fields);
+		return [$query, $vals];
 	}
 
 	public static function makeQueryValues($type, Array $values, Array $include_keys){
+		$placeholders = $vals = [];
 		foreach ($include_keys as $key){
 			$val = $values[$key];
 			$value_isnt_false = $val!==false;
 			$key_has_no_dash = !in_string('-', $key);
 			$value_isnt_array = !is_array($val);
 			if ($value_isnt_false && $key_has_no_dash && $value_isnt_array){
-				$val = is_null($val) ? "''" : ":$key";
-				$fields[] = $type==='update' ? "`$key`=$val" : "`$key`";
-				$vals[] = $val;
+				$placeholder = ":$key";
+				$fields[] = $type==='update' ? "`$key`=$placeholder" : "`$key`";
+				$placeholders[] = $placeholder;
+				$vals[$key] = !is_null($val) ? $val : '';
 			}
 		}
-		return [$fields, $vals];
-	}
-
-	private static function makeQueryUpdate(Array $values, Array $include_keys){
-		list($query) = self::makeQueryValues('update', $values, $include_keys);
-		return implode(',', $query);
+		return [$fields, $placeholders, $vals];
 	}
 
 	public function perform($statement, array $values = []){
@@ -177,4 +201,34 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
         $this->endProfile($statement, $values);
         return $sth;
     }
+
+	public function prepareList(Array $arr = []){
+		$count = count($arr);
+		for ($n=0; $n<$count; $n++){
+			$list[] = '?';
+		}
+		return implode(',', $list);
+	}
+
+	public function selectFrom($table, $where, $type='one', $fields = "*"){
+		$where_query = $this->whereQuery($where);
+		if (is_array($fields)){
+			$fields = implode(',', $fields);
+		}
+		$func = 'fetch'.ucfirst($type);
+		$data = $this->$func("SELECT $fields FROM `$table` WHERE $where_query", $where);
+		return $data;
+	}
+
+	public function selectCount($table, $where){
+		return $this->selectFrom($table, $where, 'field', ['count(*)']);
+	}
+
+	public function selectOne($table, $where, $fields = "*"){
+		return $this->selectFrom($table, $where, 'one', $fields);
+	}
+
+	public function selectAll($table, $where, $fields = "*"){
+		return $this->selectFrom($table, $where, 'all', $fields);
+	}
 }
