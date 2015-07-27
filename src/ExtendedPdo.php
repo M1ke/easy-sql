@@ -20,7 +20,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 		parent::__construct($dsn, $user, $pass, $options);
 	}
 
-	protected function excludeKeys(Array $values, Array $exclude_keys){
+	public static function excludeKeys(Array $values, Array $exclude_keys){
 		$include_keys = array_keys($values);
 		foreach ($include_keys as $n => $key){
 			if (in_array($key, $exclude_keys)){
@@ -126,12 +126,12 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 	}
 
 	public function queryInsertExc($table_name, Array $values, Array $exclude_keys = []){
-		$include_keys = $this->excludeKeys($values, $exclude_keys);
+		$include_keys = self::excludeKeys($values, $exclude_keys);
 		return $this->queryInsert($table_name, $values, $include_keys);
 	}
 
 	public function queryUpdate($table_name, $where, Array $values, Array $include_keys){
-		list($query, $values) = self::getQueryUpdate($table_name, $where, $values, $include_keys);
+		list($query, $values) = self::makeQueryUpdate($table_name, $where, $values, $include_keys);
 		return $this->fetchAffected($query, $values);
 	}
 
@@ -161,7 +161,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 	}
 
 	public function queryUpdateExc($table_name, $where, Array $values, Array $exclude_keys = []){
-		$include_keys = $this->excludeKeys($values, $exclude_keys);
+		$include_keys = self::excludeKeys($values, $exclude_keys);
 		return $this->queryUpdate($table_name, $where, $values, $include_keys);
 	}
 
@@ -207,7 +207,9 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
         return $sth;
     }
 
-	public function prepareList(Array $arr = []){
+    // We actually might not need this, as ExtendedPdo can fill 
+    //  in arrays for us as part of its "prepare" process
+	public static function prepareList(Array $arr = []){
 		$count = count($arr);
 		for ($n=0; $n<$count; $n++){
 			$list[] = '?';
@@ -216,13 +218,19 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 	}
 
 	public function selectFrom($table, $where, $type='one', $fields = "*"){
-		$where_query = $this->whereQuery($where);
+		$query = self::selectFromQuery($table, $where, $fields);
+		$func = 'fetch'.ucfirst($type);
+		$data = $this->$func($query, $where);
+		return $data;
+	}
+
+	public static function selectFromQuery($table, $where, $fields){
+		$where_query = self::whereQuery($where);
 		if (is_array($fields)){
 			$fields = implode(',', $fields);
 		}
-		$func = 'fetch'.ucfirst($type);
-		$data = $this->$func("SELECT $fields FROM `$table` WHERE $where_query", $where);
-		return $data;
+		$query = "SELECT $fields FROM `$table` WHERE $where_query";
+		return $query;
 	}
 
 	public function selectCount($table, $where){
