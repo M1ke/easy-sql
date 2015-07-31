@@ -147,16 +147,29 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 
 	public static function whereQuery($where){
 		if (is_array($where)){
-			$where_keys = array_keys($where);
-			$where_keys = array_map(function($key){
-				$key = trim($key);
-				return "$key = :$key";
-			}, $where_keys);
+			$where_keys = [];
+			foreach ($where as $key => $val){
+				$operator = '=';
+				$where_keys[] = "$key $operator :$key";
+			}
 			$where_query = implode(' and ', $where_keys);
 		}
 		else {
 			$where_query = $where;
 		}
+		return $where_query;
+	}
+
+	public static function whereQueryOperator(Array $where, Array $operators){
+		$where_keys = [];
+		foreach ($where as $key => $val){
+			$operator = '=';
+			if (!empty($operators[$key])){
+				$operator = $operators[$key];
+			}
+			$where_keys[] = "$key $operator :$key";
+		}
+		$where_query = implode(' and ', $where_keys);
 		return $where_query;
 	}
 
