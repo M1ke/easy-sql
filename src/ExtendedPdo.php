@@ -257,4 +257,8 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 	public function selectAll($table, $where, $fields = "*"){
 		return $this->selectFrom($table, $where, 'all', $fields);
 	}
+
+	public function selectField($table, $where, $field){
+		return $this->selectFrom($table, $where, 'field', $field);
+	}
 }
