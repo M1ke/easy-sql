@@ -186,4 +186,29 @@ class TestBasic extends PHPUnit_Framework_TestCase {
 		$dsn = $extended_pdo->getDsn();
 		$this->assertEquals('sqlite:host=server.com;dbname=test', $dsn);
 	}
+
+	public function testDeleteQuery(){
+		$id = 1;
+		list($query, $where) = ExtendedPdo::deleteQuery('table', ['id'=> $id], 0);
+		$this->assertEquals("DELETE FROM `table` WHERE id = :id", $query);
+		$this->assertEquals(['id'=> $id], $where);
+	}
+
+	public function testDeleteQueryWithLimit(){
+		$id = 1;
+		$limit = 2;
+		list($query, $where) = ExtendedPdo::deleteQuery('table', ['id'=> $id], $limit);
+		$this->assertEquals("DELETE FROM `table` WHERE id = :id LIMIT :_limit", $query);
+		$this->assertEquals(['id'=> $id, '_limit'=> $limit], $where);
+	}
+
+	public function testDeleteQueryNoWhere(){
+		try {
+			list($query, $where) = ExtendedPdo::deleteQuery('table', [], 0);
+			$this->assertTrue(false, 'The ExtendedPdoException was not thrown');
+		}
+		catch (ExtendedPdoException $e){
+			$this->assertTrue(true);
+		}
+	}
 }

@@ -261,4 +261,22 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 	public function selectField($table, $where, $field){
 		return $this->selectFrom($table, $where, 'field', $field);
 	}
+
+	public function delete($table, $where, $limit = null){
+		list($query, $where) = self::deleteQuery($table, $where, $limit);
+		return $this->fetchAffected($query, $where);
+	}
+
+	public static function deleteQuery($table, $where, $limit){
+		$where_query = self::whereQuery($where);
+		$query = "DELETE FROM `$table` WHERE $where_query";
+		if (empty($where_query)){
+			throw new Exception('Delete commands must contain a WHERE component.', $query);
+		}
+		if (!empty($limit)){
+			$query .= " LIMIT :_limit";
+			$where['_limit'] = $limit;
+		}
+		return [$query, $where];
+	}
 }
