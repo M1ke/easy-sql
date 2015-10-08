@@ -159,12 +159,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 			$where_keys = [];
 			foreach ($where as $key => $val){
 				$operator = '=';
-				if (isset($values[$key])){
-					$param_key = $key.self::$where_key_collision;
-				}
-				else {
-					$param_key = $key;
-				}
+				$param_key = isset($values[$key]) ? ($key . self::$where_key_collision) : $key;
 				$where_keys[] = "$key $operator :$param_key";
 			}
 			$where_query = implode(' and ', $where_keys);
