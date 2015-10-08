@@ -15,6 +15,8 @@ use PDOException;
  */
 class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 {
+	public static $where_key_collision = '____';
+
 	public function __construct($db, $user, $pass, array $options = [], $type = 'mysql', $server = 'localhost'){
 		$dsn = $type.':host='.$server.';dbname='.$db;
 		parent::__construct($dsn, $user, $pass, $options);
@@ -139,20 +141,23 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 		list($query_update, $values) = self::makeQueryUpdateComponents($values, $include_keys);
 		$where_query = self::whereQuery($where, $values);
 		if (is_array($where)){
-			foreach ($where as $key => $val){
-				if (isset($values[$key])){
-					$new_key = $key.self::$where_key_collision;
-					$where[$new_key] = $val;
-					unset($where[$key]);
-				}
-			}
+			$where = self::makeQueryUpdateWhere($where, $values);
 			$values = array_merge($values, $where);
 		}
 		$query = "UPDATE $table_name SET $query_update WHERE $where_query";
 		return [$query, $values];
 	}
 
-	public static $where_key_collision = '____';
+	public static function makeQueryUpdateWhere(array $where, array $values){
+		$where_copy = [];
+		foreach ($where as $key => $val){
+			if (isset($values[$key])){
+				$key = $key.self::$where_key_collision;
+			}
+			$where_copy[$key] = $val;
+		}
+		return $where_copy;
+	}
 
 	public static function whereQuery($where, $values = []){
 		if (is_array($where)){

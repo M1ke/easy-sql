@@ -56,6 +56,19 @@ class TestBasic extends PHPUnit_Framework_TestCase {
 		], $values);
 	}
 
+	public function testMakeQueryUpdateWhere(){
+		$value = 'val';
+		$key = 'test';
+		$where = [
+			$key=> $value,
+		];
+		$values = $where;
+		$where_new = ExtendedPdo::makeQueryUpdateWhere($where, $values);
+
+		$collision_string = ExtendedPdo::$where_key_collision;
+		$this->assertEquals([$key.$collision_string=> $value], $where_new);
+	}
+
 	public function testMakeQueryUpdateRepeatedField(){
 		$table_name = 'table';
 		$where = [
