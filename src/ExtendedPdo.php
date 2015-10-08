@@ -137,20 +137,35 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 
 	public static function makeQueryUpdate($table_name, $where, Array $values, Array $include_keys){
 		list($query_update, $values) = self::makeQueryUpdateComponents($values, $include_keys);
-		$where_query = self::whereQuery($where);
+		$where_query = self::whereQuery($where, $values);
 		if (is_array($where)){
+			foreach ($where as $key => $val){
+				if (isset($values[$key])){
+					$new_key = $key.self::$where_key_collision;
+					$where[$new_key] = $val;
+					unset($where[$key]);
+				}
+			}
 			$values = array_merge($values, $where);
 		}
 		$query = "UPDATE $table_name SET $query_update WHERE $where_query";
 		return [$query, $values];
 	}
 
-	public static function whereQuery($where){
+	public static $where_key_collision = '____';
+
+	public static function whereQuery($where, $values = []){
 		if (is_array($where)){
 			$where_keys = [];
 			foreach ($where as $key => $val){
 				$operator = '=';
-				$where_keys[] = "$key $operator :$key";
+				if (isset($values[$key])){
+					$param_key = $key.self::$where_key_collision;
+				}
+				else {
+					$param_key = $key;
+				}
+				$where_keys[] = "$key $operator :$param_key";
 			}
 			$where_query = implode(' and ', $where_keys);
 		}
@@ -199,7 +214,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 			$value_isnt_array = !is_array($val);
 			if ($value_isnt_false && $key_has_no_dash && $value_isnt_array){
 				$placeholder = ":$key";
-				$fields[] = $type==='update' ? "`$key`=$placeholder" : "`$key`";
+				$fields[] = $type==='update' ? "`$key`= $placeholder" : "`$key`";
 				$placeholders[] = $placeholder;
 				$vals[$key] = !is_null($val) ? $val : '';
 			}
@@ -220,7 +235,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
         return $sth;
     }
 
-    // We actually might not need this, as ExtendedPdo can fill 
+    // We actually might not need this, as ExtendedPdo can fill
     //  in arrays for us as part of its "prepare" process
 	public static function prepareList(Array $arr = []){
 		$count = count($arr);
