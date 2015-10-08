@@ -214,7 +214,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 			$value_isnt_array = !is_array($val);
 			if ($value_isnt_false && $key_has_no_dash && $value_isnt_array){
 				$placeholder = ":$key";
-				$fields[] = $type==='update' ? "`$key`= $placeholder" : "`$key`";
+				$fields[] = $type==='update' ? "`$key` = $placeholder" : "`$key`";
 				$placeholders[] = $placeholder;
 				$vals[$key] = !is_null($val) ? $val : '';
 			}

@@ -34,7 +34,7 @@ class TestBasic extends PHPUnit_Framework_TestCase {
 		];
 		$include_keys = ['string'];
 		list($query, $values) = ExtendedPdo::makeQueryUpdate($table_name, $where, $values, $include_keys);
-		$this->assertEquals("UPDATE table SET `string`= :string WHERE key = :key", $query);
+		$this->assertEquals("UPDATE table SET `string` = :string WHERE key = :key", $query);
 		$this->assertEquals([
 			'string'=> 'test',
 			'key'=> 1,
@@ -50,7 +50,7 @@ class TestBasic extends PHPUnit_Framework_TestCase {
 		];
 		$include_keys = ['string'];
 		list($query, $values) = ExtendedPdo::makeQueryUpdate($table_name, $where, $values, $include_keys);
-		$this->assertEquals("UPDATE table SET `string`= :string WHERE key=1", $query);
+		$this->assertEquals("UPDATE table SET `string` = :string WHERE key=1", $query);
 		$this->assertEquals([
 			'string'=> 'test',
 		], $values);
@@ -68,7 +68,7 @@ class TestBasic extends PHPUnit_Framework_TestCase {
 		$include_keys = ['string'];
 		$collision_string = ExtendedPdo::$where_key_collision;
 		list($query, $values) = ExtendedPdo::makeQueryUpdate($table_name, $where, $values, $include_keys);
-		$this->assertEquals("UPDATE table SET `string`= :string WHERE key = :key and string = :string$collision_string", $query);
+		$this->assertEquals("UPDATE table SET `string` = :string WHERE key = :key and string = :string$collision_string", $query);
 		$this->assertEquals([
 			'string'=> 'test',
 			'key'=> 1,
@@ -134,7 +134,7 @@ class TestBasic extends PHPUnit_Framework_TestCase {
 		];
 		$include_keys = ['id', 'string', 'empty', 'false', 'null'];
 		list($fields, $placeholders, $vals) = ExtendedPdo::makeQueryValues('update', $values, $include_keys);
-		$this->assertEquals(['`id`= :id', '`string`= :string', '`empty`= :empty', '`null`= :null'], $fields);
+		$this->assertEquals(['`id` = :id', '`string` = :string', '`empty` = :empty', '`null` = :null'], $fields);
 		// Placeholders should be the same as "testMakeQueryValuesInsert" AND are irrelevant for update
 		// Vals should be the same as "testMakeQueryValuesInsert"
 		$this->assertEquals([
