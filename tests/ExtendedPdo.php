@@ -124,7 +124,7 @@ class TestBasic extends PHPUnit_Framework_TestCase {
 			'null'=> null,
 			'ignored'=> 'rawr',
 		];
-		$include_keys = ['id', 'string', 'empty', 'false', 'null'];
+		$include_keys = ['id', 'string', 'empty', 'false', 'null', 'doesnt_exist'];
 		list($fields, $placeholders, $vals) = ExtendedPdo::makeQueryValues('insert', $values, $include_keys);
 		$this->assertEquals(['`id`', '`string`', '`empty`', '`null`'], $fields);
 		$this->assertEquals([':id', ':string', ':empty', ':null'], $placeholders);

@@ -207,12 +207,14 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 
 	public static function makeQueryValues($type, Array $values, Array $include_keys){
 		$placeholders = $vals = [];
+		$values_keys = array_keys($values);
 		foreach ($include_keys as $key){
 			$val = $values[$key];
+			$key_is_set = in_array($key, $values_keys);
 			$value_isnt_false = $val!==false;
 			$key_has_no_dash = strpos($key, '-')===false;
 			$value_isnt_array = !is_array($val);
-			if ($value_isnt_false && $key_has_no_dash && $value_isnt_array){
+			if ($value_isnt_false && $key_has_no_dash && $value_isnt_array && $key_is_set){
 				$placeholder = ":$key";
 				$fields[] = $type==='update' ? "`$key` = $placeholder" : "`$key`";
 				$placeholders[] = $placeholder;
