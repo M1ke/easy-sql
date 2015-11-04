@@ -250,6 +250,10 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 	public function selectFrom($table, $where, $type='one', $fields = "*"){
 		$query = self::selectFromQuery($table, $where, $fields);
 		$func = 'fetch'.ucfirst($type);
+		//if we had a string $where, pass on an empty array as where
+		if (!is_array($where)){
+			$where = [];
+		}
 		$data = $this->$func($query, $where);
 		return $data;
 	}
