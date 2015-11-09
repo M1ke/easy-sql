@@ -247,10 +247,14 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 		return implode(',', $list);
 	}
 
-	public function selectFrom($table, $where, $type='one', $fields = "*"){
+	/**
+	 * We don't typehint the $where value because it can be a manualy typed
+	 * string for things such as > < between etc.
+	 */
+	public function selectFrom($table, $where, $type = 'one', $fields = "*"){
 		$query = self::selectFromQuery($table, $where, $fields);
 		$func = 'fetch'.ucfirst($type);
-		//if we had a string $where, pass on an empty array as where
+		// if we had a string $where, pass on an empty array as where
 		if (!is_array($where)){
 			$where = [];
 		}
