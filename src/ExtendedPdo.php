@@ -53,52 +53,40 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 	 * N.b.: If multiple rows have the same first column value, the last
 	 * row with that value will override earlier rows.
 	 *
-	 * @param string $statement The SQL statement to prepare and execute.
-	 *
+	 * @param string $query
 	 * @param array $values Values to bind to the query.
 	 *
-	 * @param callable $callable A callable to be applied to each of the rows
-	 * to be returned.
-	 *
-	 * @param string $key_field The field to use as a key.
-	 *
+	 * @param null $callable
+	 * @param string $key_field
 	 * @return array
+	 * @throws Exception
 	 *
 	 */
-	public function fetchAssoc($query, array $values = [], ...$args){
+	public function fetchAssoc($query, array $values = [], $callable = null, $key_field = ''){
 		$statement = $this->perform($query, $values);
-
-		foreach ($args as $arg){
-			if (is_callable($arg)){
-				$callable = $arg;
-			}
-			else {
-				$key_field = $arg;
-			}
-		}
 
 		$data = [];
 		while ($row = $statement->fetch(self::FETCH_ASSOC)){
 			if ($callable){
 				$row = call_user_func($callable, $row);
 			}
-			$key = $key_field ? $row[$key_field] : current($row);
+			$key = !empty($key_field) ? $row[$key_field] : current($row);
 			$data[$key] = $row;
 		}
 		return $data;
 	}
 
-    /**
-     *
-     * Fetches one field from one row of the database as a scalar value.
-     *
-     * @param string $statement The SQL statement to prepare and execute.
-     *
-     * @param array $values Values to bind to the query.
-     *
-     * @return string
-     *
-     */
+	/**
+	 *
+	 * Fetches one field from one row of the database as a scalar value.
+	 *
+	 * @param array $args
+	 * @return string
+	 * @internal param string $statement The SQL statement to prepare and execute.
+	 *
+	 * @internal param array $values Values to bind to the query.
+	 *
+	 */
 	public function fetchField(...$args){
 		$data = $this->fetchOne(...$args);
 		$value = is_array($data) ? reset($data) : '';
@@ -117,12 +105,13 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 	 *
 	 */
 	public function performId($query, $values){
-		$this->perform($query, $values, true);
+		$this->perform($query, $values);
 		return $this->lastInsertId();
 	}
 
 	public function queryInsert($table_name, Array $values, Array $include_keys){
 		list($query, $values) = self::makeQueryInsert($values, $include_keys);
+		/** @noinspection SqlResolve */
 		$query = "INSERT INTO `$table_name` ".$query;
 		return $this->performId($query, $values);
 	}
@@ -208,6 +197,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 	public static function makeQueryValues($type, Array $values, Array $include_keys){
 		$placeholders = $vals = [];
 		$values_keys = array_keys($values);
+		$fields = [];
 		foreach ($include_keys as $key){
 			$val = $values[$key];
 			$key_is_set = in_array($key, $values_keys);
@@ -241,6 +231,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
     //  in arrays for us as part of its "prepare" process
 	public static function prepareList(Array $arr = []){
 		$count = count($arr);
+		$list = [];
 		for ($n=0; $n<$count; $n++){
 			$list[] = '?';
 		}
@@ -250,6 +241,11 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 	/**
 	 * We don't typehint the $where value because it can be a manualy typed
 	 * string for things such as > < between etc.
+	 * @param $table
+	 * @param $where
+	 * @param string $type
+	 * @param string $fields
+	 * @return
 	 */
 	public function selectFrom($table, $where, $type = 'one', $fields = "*"){
 		$query = self::selectFromQuery($table, $where, $fields);
@@ -267,6 +263,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 		if (is_array($fields)){
 			$fields = implode(',', $fields);
 		}
+		/** @noinspection SqlResolve */
 		$query = "SELECT $fields FROM `$table` WHERE $where_query";
 		return $query;
 	}
@@ -294,6 +291,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 
 	public static function deleteQuery($table, $where, $limit){
 		$where_query = self::whereQuery($where);
+		/** @noinspection SqlResolve */
 		$query = "DELETE FROM `$table` WHERE $where_query";
 		if (empty($where_query)){
 			throw new Exception('Delete commands must contain a WHERE component.', $query);
