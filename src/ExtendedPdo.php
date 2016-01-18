@@ -358,6 +358,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 		$values_keys = array_keys($values);
 
 		foreach ($include_keys as $key){
+			$key = trim($key);
 			$val = $values[$key];
 			$key_is_set = in_array($key, $values_keys);
 			$value_isnt_false = $val!==false;
