@@ -8,9 +8,11 @@ An extension to [Aura.Sql](https://github.com/auraphp/Aura.Sql) which simplifies
 use M1ke\Sql\ExtendedPdo;
 
 $pdo = new ExtendedPdo('database', 'user', 'pass');
-$user_id = $pdo->queryInsert('users', ['name'=>'Foo', 'email'=>'foo@bar.com']);
+
+$user_id = $pdo->insert('users', ['name'=>'Foo', 'email'=>'foo@bar.com']);
 // user created, returns ID
-$affected_rows = $pdo->queryUpdate('users', "SET :params WHERE user_id={$user_id}", ['name'=>'Bar']);
+
+$affected_rows = $pdo->update('users', "SET :params WHERE user_id={$user_id}", ['name'=>'Bar']);
 // user name changed to "Bar", returns number of rows affected
 ```
 

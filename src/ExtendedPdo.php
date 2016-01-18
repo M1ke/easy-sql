@@ -436,19 +436,32 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 	 */
 	public static function selectFromQuery($table, $where, $fields){
 		$where_query = self::whereQuery($where);
+
+		$fields = self::fieldFormat($fields);
+
+		/** @noinspection SqlResolve */
+		$query = "SELECT $fields FROM `$table` WHERE $where_query";
+
+		return $query;
+	}
+
+	/**
+	 * @param array|string $fields
+	 * @return string
+	 */
+	private static function fieldFormat($fields){
 		if (!is_array($fields)){
 			$fields = explode(',', $fields);
 		}
 		foreach ($fields as &$field){
+			$field = trim($field);
 			if (strpos($field, '*')===false){
 				$field = "`$field`";
 			}
 		}
 		$fields = implode(',', $fields);
-		/** @noinspection SqlResolve */
-		$query = "SELECT $fields FROM `$table` WHERE $where_query";
 
-		return $query;
+		return $fields;
 	}
 
 	/**

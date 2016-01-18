@@ -5,7 +5,7 @@ require __DIR__.'/_bootstrap.php';
 use M1ke\Sql\Exception as ExtendedPdoException;
 use M1ke\Sql\ExtendedPdo;
 
-class TestBasic extends PHPUnit_Framework_TestCase {
+class TestExtendedPdo extends PHPUnit_Framework_TestCase {
 	public function testClassInstantiates(){
 		$pdo = new ExtendedPdo($db, $user, $pass);
 		$this->assertTrue($pdo instanceof \Aura\Sql\ExtendedPdo);
@@ -199,10 +199,10 @@ class TestBasic extends PHPUnit_Framework_TestCase {
 	public function testSelectFromQueryWhereString(){
 		$table = 'test';
 		$where = "id = 1";
-		$fields = 'string';
+		$fields = 'string, id';
 		$query = ExtendedPdo::selectFromQuery($table, $where, $fields);
 		/** @noinspection SqlResolve */
-		$this->assertEquals("SELECT `string` FROM `test` WHERE id = 1", $query);
+		$this->assertEquals("SELECT `string`,`id` FROM `test` WHERE id = 1", $query);
 	}
 
 	public function testExcludeKeys(){
