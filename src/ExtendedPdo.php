@@ -13,34 +13,62 @@ use PDOException;
  * @package M1ke.Sql
  *
  */
-class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
-{
+class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 	public static $where_key_collision = '____';
 
+	/**
+	 * ExtendedPdo constructor.
+	 * @param string $db
+	 * @param string $user
+	 * @param string $pass
+	 * @param array $options
+	 * @param string $type
+	 * @param string $server
+	 */
 	public function __construct($db, $user, $pass, array $options = [], $type = 'mysql', $server = 'localhost'){
-		$dsn = $type.':host='.$server.';dbname='.$db;
+		$dsn = $type . ':host=' . $server . ';dbname=' . $db;
 		parent::__construct($dsn, $user, $pass, $options);
 	}
 
-	public static function excludeKeys(Array $values, Array $exclude_keys){
+	/**
+	 * @param array $values
+	 * @param array $exclude_keys
+	 * @return array
+	 */
+	public static function excludeKeys(array $values, array $exclude_keys){
 		$include_keys = array_keys($values);
 		foreach ($include_keys as $n => $key){
 			if (in_array($key, $exclude_keys)){
 				unset($include_keys[$n]);
 			}
 		}
+
 		return $include_keys;
 	}
 
-	protected function fetchAllWithCallable($fetch_type, $statement, array $values = array(), $callable = null){
+	/**
+	 * @param string $fetch_type
+	 * @param string $statement
+	 * @param array $values
+	 * @param null $callable
+	 * @return array
+	 */
+	protected function fetchAllWithCallable($fetch_type, $statement, array $values = [], $callable = null){
 		$args = func_get_args();
 		$return = parent::fetchAllWithCallable(...$args);
+
 		return is_array($return) ? $return : [];
 	}
 
+	/**
+	 * @param string $statement
+	 * @param array $values
+	 * @return array
+	 */
 	public function fetchOne($statement, array $values = []){
 		$args = func_get_args();
 		$return = parent::fetchOne(...$args);
+
 		return is_array($return) ? $return : [];
 	}
 
@@ -73,6 +101,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 			$key = !empty($key_field) ? $row[$key_field] : current($row);
 			$data[$key] = $row;
 		}
+
 		return $data;
 	}
 
@@ -90,6 +119,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 	public function fetchField(...$args){
 		$data = $this->fetchOne(...$args);
 		$value = is_array($data) ? reset($data) : '';
+
 		return $value;
 	}
 
@@ -106,48 +136,130 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 	 */
 	public function performId($query, $values){
 		$this->perform($query, $values);
+
 		return $this->lastInsertId();
 	}
 
-	public function queryInsert($table_name, Array $values, Array $include_keys){
-		list($query, $values) = self::makeQueryInsert($values, $include_keys);
+	/**
+	 * @param string $table_name
+	 * @param array $vals
+	 * @param array $include_keys
+	 * @return int
+	 */
+	public function insert($table_name, array $vals, array $include_keys){
+		$query_values = self::makeQueryInsert($vals, $include_keys);
 		/** @noinspection SqlResolve */
-		$query = "INSERT INTO `$table_name` ".$query;
-		return $this->performId($query, $values);
+		$query = "INSERT INTO `$table_name` " . $query_values->query;
+
+		return $this->performId($query, $query_values->values);
 	}
 
-	public function queryInsertExc($table_name, Array $values, Array $exclude_keys = []){
+	/**
+	 * @param $table_name
+	 * @param array $values
+	 * @param array $include_keys
+	 * @return int
+	 *
+	 * @deprecated use insert()
+	 */
+	public function queryInsert($table_name, array $values, array $include_keys){
+		return $this->insert($table_name, $values, $include_keys);
+	}
+
+	/**
+	 * @param string $table_name
+	 * @param array $values
+	 * @param array $exclude_keys
+	 * @return int
+	 */
+	public function insertExc($table_name, array $values, array $exclude_keys = []){
 		$include_keys = self::excludeKeys($values, $exclude_keys);
-		return $this->queryInsert($table_name, $values, $include_keys);
+
+		return $this->insert($table_name, $values, $include_keys);
 	}
 
-	public function queryUpdate($table_name, $where, Array $values, Array $include_keys){
-		list($query, $values) = self::makeQueryUpdate($table_name, $where, $values, $include_keys);
-		return $this->fetchAffected($query, $values);
+	/**
+	 * @param $table_name
+	 * @param array $values
+	 * @param array $exclude_keys
+	 * @return int
+	 *
+	 * @deprecated use insertExc()
+	 */
+	public function queryInsertExc($table_name, array $values, array $exclude_keys = []){
+		return $this->insertExc($table_name, $values, $exclude_keys);
 	}
 
-	public static function makeQueryUpdate($table_name, $where, Array $values, Array $include_keys){
-		list($query_update, $values) = self::makeQueryUpdateComponents($values, $include_keys);
+	/**
+	 * @param string $table_name
+	 * @param string|array $where
+	 * @param array $values
+	 * @param array $include_keys
+	 * @return int
+	 */
+	public function update($table_name, $where, array $values, array $include_keys){
+		$query_values = self::makeQueryUpdate($table_name, $where, $values, $include_keys);
+
+		return $this->fetchAffected($query_values->query, $query_values->values);
+	}
+
+	/**
+	 * @param $table_name
+	 * @param $where
+	 * @param array $values
+	 * @param array $include_keys
+	 * @return int
+	 *
+	 * @deprecated use update()
+	 */
+	public function queryUpdate($table_name, $where, array $values, array $include_keys){
+		return $this->update($table_name, $where, $values, $include_keys);
+	}
+
+	/**
+	 * @param $table_name
+	 * @param $where
+	 * @param array $vals
+	 * @param array $include_keys
+	 * @return ExtendedPdoQueryValues
+	 */
+	public static function makeQueryUpdate($table_name, $where, array $vals, array $include_keys){
+		$query_values = self::makeQueryUpdateComponents($vals, $include_keys);
+		$values = $query_values->values;
+
 		$where_query = self::whereQuery($where, $values);
+
 		if (is_array($where)){
 			$where = self::makeQueryUpdateWhere($where, $values);
 			$values = array_merge($values, $where);
 		}
-		$query = "UPDATE $table_name SET $query_update WHERE $where_query";
-		return [$query, $values];
+		$query = "UPDATE $table_name SET {$query_values->query} WHERE $where_query";
+
+		return new ExtendedPdoQueryValues($query, $values);
 	}
 
+	/**
+	 * @param array $where
+	 * @param array $values
+	 * @return array
+	 */
 	public static function makeQueryUpdateWhere(array $where, array $values){
 		$where_copy = [];
 		foreach ($where as $key => $val){
 			if (isset($values[$key])){
-				$key = $key.self::$where_key_collision;
+				$key = $key . self::$where_key_collision;
 			}
 			$where_copy[$key] = $val;
 		}
+
 		return $where_copy;
 	}
 
+	/**
+	 * @param array|string $where
+	 * @param array $values
+	 * @return string
+	 */
 	public static function whereQuery($where, $values = []){
 		if (is_array($where)){
 			$where_keys = [];
@@ -161,10 +273,16 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 		else {
 			$where_query = $where;
 		}
+
 		return $where_query;
 	}
 
-	public static function whereQueryOperator(Array $where, Array $operators){
+	/**
+	 * @param array $where
+	 * @param array $operators
+	 * @return string
+	 */
+	public static function whereQueryOperator(array $where, array $operators){
 		$where_keys = [];
 		foreach ($where as $key => $val){
 			$operator = '=';
@@ -174,36 +292,77 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 			$where_keys[] = "$key $operator :$key";
 		}
 		$where_query = implode(' and ', $where_keys);
+
 		return $where_query;
 	}
 
-	public function queryUpdateExc($table_name, $where, Array $values, Array $exclude_keys = []){
+	/**
+	 * @param string $table_name
+	 * @param array|string $where
+	 * @param array $values
+	 * @param array $exclude_keys
+	 * @return int
+	 */
+	public function updateExc($table_name, $where, array $values, array $exclude_keys = []){
 		$include_keys = self::excludeKeys($values, $exclude_keys);
-		return $this->queryUpdate($table_name, $where, $values, $include_keys);
+
+		return $this->update($table_name, $where, $values, $include_keys);
 	}
 
-	public static function makeQueryInsert(Array $values, Array $include_keys){
-		list($fields, $placeholders, $vals) = self::makeQueryValues('insert', $values, $include_keys);
-		$query = "(".implode(', ', $fields).") VALUES (".implode(',', $placeholders).")";
-		return [$query, $vals];
+	/**
+	 * @param $table_name
+	 * @param $where
+	 * @param array $values
+	 * @param array $exclude_keys
+	 * @return int
+	 *
+	 * @deprecated use updateExc()
+	 */
+	public function queryUpdateExc($table_name, $where, array $values, array $exclude_keys = []){
+		return $this->updateExc($table_name, $where, $values, $exclude_keys);
 	}
 
-	public static function makeQueryUpdateComponents(Array $values, Array $include_keys){
-		list($fields, $placeholders, $vals) = self::makeQueryValues('update', $values, $include_keys);
-		$query = implode(', ', $fields);
-		return [$query, $vals];
+	/**
+	 * @param array $values
+	 * @param array $include_keys
+	 * @return ExtendedPdoQueryValues
+	 */
+	public static function makeQueryInsert(array $values, array $include_keys){
+		$query_placeholders = self::makeQueryValues('insert', $values, $include_keys);
+		$query = "(" . implode(', ', $query_placeholders->fields) . ") VALUES (" . implode(',', $query_placeholders->placeholders) . ")";
+
+		return new ExtendedPdoQueryValues($query, $query_placeholders->vals);
 	}
 
-	public static function makeQueryValues($type, Array $values, Array $include_keys){
-		$placeholders = $vals = [];
+	/**
+	 * @param array $values
+	 * @param array $include_keys
+	 * @return ExtendedPdoQueryValues
+	 */
+	public static function makeQueryUpdateComponents(array $values, array $include_keys){
+		$query_placeholders = self::makeQueryValues('update', $values, $include_keys);
+		$query = implode(', ', $query_placeholders->fields);
+
+		return new ExtendedPdoQueryValues($query, $query_placeholders->vals);
+	}
+
+	/**
+	 * @param $type
+	 * @param array $values
+	 * @param array $include_keys
+	 * @return ExtendedPdoQueryPlaceholders
+	 */
+	public static function makeQueryValues($type, array $values, array $include_keys){
+		$fields = $placeholders = $vals = [];
 		$values_keys = array_keys($values);
-		$fields = [];
+
 		foreach ($include_keys as $key){
 			$val = $values[$key];
 			$key_is_set = in_array($key, $values_keys);
 			$value_isnt_false = $val!==false;
 			$key_has_no_dash = strpos($key, '-')===false;
 			$value_isnt_array = !is_array($val);
+
 			if ($value_isnt_false && $key_has_no_dash && $value_isnt_array && $key_is_set){
 				$placeholder = ":$key";
 				$fields[] = $type==='update' ? "`$key` = $placeholder" : "`$key`";
@@ -211,50 +370,54 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 				$vals[$key] = !is_null($val) ? $val : '';
 			}
 		}
-		return [$fields, $placeholders, $vals];
+
+		return new ExtendedPdoQueryPlaceholders($fields, $placeholders, $vals);
 	}
 
 	public function perform($statement, array $values = []){
-        $sth = $this->prepareWithValues($statement, $values);
-        $this->beginProfile(__FUNCTION__);
-        try {
-        	$sth->execute();
-        }
-        catch (PDOException $e){
-        	throw new Exception($e->getMessage(), $sth->queryString);
-        }
-        $this->endProfile($statement, $values);
-        return $sth;
-    }
+		$sth = $this->prepareWithValues($statement, $values);
+		$this->beginProfile(__FUNCTION__);
+		try {
+			$sth->execute();
+		}
+		catch (PDOException $e) {
+			throw new Exception($e->getMessage(), $sth->queryString);
+		}
+		$this->endProfile($statement, $values);
 
-    // We actually might not need this, as ExtendedPdo can fill
-    //  in arrays for us as part of its "prepare" process
-	public static function prepareList(Array $arr = []){
+		return $sth;
+	}
+
+	// We actually might not need this, as ExtendedPdo can fill
+	//  in arrays for us as part of its "prepare" process
+	public static function prepareList(array $arr = []){
 		$count = count($arr);
 		$list = [];
-		for ($n=0; $n<$count; $n++){
+		for ($n = 0; $n<$count; $n++){
 			$list[] = '?';
 		}
+
 		return implode(',', $list);
 	}
 
 	/**
-	 * We don't typehint the $where value because it can be a manualy typed
+	 * We don't typehint the $where value because it can be a manually typed
 	 * string for things such as > < between etc.
-	 * @param $table
-	 * @param $where
+	 * @param string $table
+	 * @param string $where
 	 * @param string $type
 	 * @param string $fields
 	 * @return
 	 */
 	public function selectFrom($table, $where, $type = 'one', $fields = "*"){
 		$query = self::selectFromQuery($table, $where, $fields);
-		$func = 'fetch'.ucfirst($type);
+		$func = 'fetch' . ucfirst($type);
 		// if we had a string $where, pass on an empty array as where
 		if (!is_array($where)){
 			$where = [];
 		}
 		$data = $this->$func($query, $where);
+
 		return $data;
 	}
 
@@ -265,6 +428,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 		}
 		/** @noinspection SqlResolve */
 		$query = "SELECT $fields FROM `$table` WHERE $where_query";
+
 		return $query;
 	}
 
@@ -285,8 +449,9 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 	}
 
 	public function delete($table, $where, $limit = null){
-		list($query, $where) = self::deleteQuery($table, $where, $limit);
-		return $this->fetchAffected($query, $where);
+		$query_values = self::deleteQuery($table, $where, $limit);
+
+		return $this->fetchAffected($query_values->query, $query_values->values);
 	}
 
 	public static function deleteQuery($table, $where, $limit){
@@ -300,6 +465,50 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface
 			$query .= " LIMIT :_limit";
 			$where['_limit'] = $limit;
 		}
-		return [$query, $where];
+
+		return new ExtendedPdoQueryValues($query, $where);
+	}
+}
+
+class ExtendedPdoQueryPlaceholders {
+	/**
+	 * @var array
+	 */
+	public $fields;
+	/**
+	 * @var array
+	 */
+	public $placeholders;
+	/**
+	 * @var array
+	 */
+	public $vals;
+
+	public function __construct(array $fields, array $placeholders, array $vals){
+		$this->fields = $fields;
+		$this->placeholders = $placeholders;
+		$this->vals = $vals;
+	}
+}
+
+class ExtendedPdoQueryValues {
+	/**
+	 * @var string
+	 */
+	public $query;
+	/**
+	 * @var array
+	 */
+	public $values = [];
+
+	/**
+	 * ExtendedPdoQueryValues constructor.
+	 * @param string $query
+	 * @param array $values
+	 */
+	public function __construct($query, array $values = []){
+
+		$this->query = $query;
+		$this->values = $values;
 	}
 }
