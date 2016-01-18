@@ -233,6 +233,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 			$where = self::makeQueryUpdateWhere($where, $values);
 			$values = array_merge($values, $where);
 		}
+		$table_name = "`$table_name`";
 		$query = "UPDATE $table_name SET {$query_values->query} WHERE $where_query";
 
 		return new ExtendedPdoQueryValues($query, $values);
@@ -266,7 +267,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 			foreach ($where as $key => $val){
 				$operator = '=';
 				$param_key = isset($values[$key]) ? ($key . self::$where_key_collision) : $key;
-				$where_keys[] = "$key $operator :$param_key";
+				$where_keys[] = "`$key` $operator :$param_key";
 			}
 			$where_query = implode(' and ', $where_keys);
 		}
@@ -289,7 +290,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 			if (!empty($operators[$key])){
 				$operator = $operators[$key];
 			}
-			$where_keys[] = "$key $operator :$key";
+			$where_keys[] = "`$key` $operator :$key";
 		}
 		$where_query = implode(' and ', $where_keys);
 
@@ -374,6 +375,12 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 		return new ExtendedPdoQueryPlaceholders($fields, $placeholders, $vals);
 	}
 
+	/**
+	 * @param string $statement
+	 * @param array $values
+	 * @return \PDOStatement
+	 * @throws Exception
+	 */
 	public function perform($statement, array $values = []){
 		$sth = $this->prepareWithValues($statement, $values);
 		$this->beginProfile(__FUNCTION__);
@@ -404,10 +411,10 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 	 * We don't typehint the $where value because it can be a manually typed
 	 * string for things such as > < between etc.
 	 * @param string $table
-	 * @param string $where
+	 * @param array|string $where
 	 * @param string $type
 	 * @param string $fields
-	 * @return
+	 * @return array|string
 	 */
 	public function selectFrom($table, $where, $type = 'one', $fields = "*"){
 		$query = self::selectFromQuery($table, $where, $fields);
@@ -421,39 +428,88 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 		return $data;
 	}
 
+	/**
+	 * @param string $table
+	 * @param array|string $where
+	 * @param array|string $fields
+	 * @return string
+	 */
 	public static function selectFromQuery($table, $where, $fields){
 		$where_query = self::whereQuery($where);
-		if (is_array($fields)){
-			$fields = implode(',', $fields);
+		if (!is_array($fields)){
+			$fields = explode(',', $fields);
 		}
+		foreach ($fields as &$field){
+			if (strpos($field, '*')===false){
+				$field = "`$field`";
+			}
+		}
+		$fields = implode(',', $fields);
 		/** @noinspection SqlResolve */
 		$query = "SELECT $fields FROM `$table` WHERE $where_query";
 
 		return $query;
 	}
 
+	/**
+	 * @param string $table
+	 * @param array|string $where
+	 * @return int
+	 */
 	public function selectCount($table, $where){
 		return $this->selectFrom($table, $where, 'field', ['count(*)']);
 	}
 
+	/**
+	 * @param string $table
+	 * @param array|string $where
+	 * @param string $fields
+	 * @return array
+	 */
 	public function selectOne($table, $where, $fields = "*"){
 		return $this->selectFrom($table, $where, 'one', $fields);
 	}
 
+	/**
+	 * @param string $table
+	 * @param array|string $where
+	 * @param string $fields
+	 * @return array
+	 */
 	public function selectAll($table, $where, $fields = "*"){
 		return $this->selectFrom($table, $where, 'all', $fields);
 	}
 
+	/**
+	 * @param string $table
+	 * @param array|string $where
+	 * @param string $field
+	 * @return string
+	 */
 	public function selectField($table, $where, $field){
 		return $this->selectFrom($table, $where, 'field', $field);
 	}
 
+	/**
+	 * @param string $table
+	 * @param array|string $where
+	 * @param null $limit
+	 * @return int
+	 * @throws Exception
+	 */
 	public function delete($table, $where, $limit = null){
 		$query_values = self::deleteQuery($table, $where, $limit);
 
 		return $this->fetchAffected($query_values->query, $query_values->values);
 	}
 
+	/**
+	 * @param $table
+	 * @param $where
+	 * @param $limit
+	 * @return ExtendedPdoQueryValues
+	 * @throws Exception
+	 */
 	public static function deleteQuery($table, $where, $limit){
 		$where_query = self::whereQuery($where);
 		/** @noinspection SqlResolve */
@@ -470,6 +526,12 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 	}
 }
 
+/**
+ * Class ExtendedPdoQueryPlaceholders
+ * @package M1ke\Sql
+ *
+ * Acts as a hintable return type for makeQueryValues
+ */
 class ExtendedPdoQueryPlaceholders {
 	/**
 	 * @var array
@@ -491,6 +553,12 @@ class ExtendedPdoQueryPlaceholders {
 	}
 }
 
+/**
+ * Class ExtendedPdoQueryValues
+ * @package M1ke\Sql
+ *
+ * Acts as a hintable return type for query/value mixed generation
+ */
 class ExtendedPdoQueryValues {
 	/**
 	 * @var string

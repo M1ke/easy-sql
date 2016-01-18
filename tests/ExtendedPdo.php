@@ -13,47 +13,55 @@ class TestBasic extends PHPUnit_Framework_TestCase {
 	}
 
 	public function testMakeQueryInsert(){
-		$values = [
+		$vals = [
 			'string'=> 'test',
 			'not'=> 'nope',
 		];
 		$include_keys = ['string'];
-		list($query, $values) = ExtendedPdo::makeQueryInsert($values, $include_keys);
-		$this->assertEquals("(`string`) VALUES (:string)", $query);
+
+		$query_values = ExtendedPdo::makeQueryInsert($vals, $include_keys);
+
+		$this->assertEquals("(`string`) VALUES (:string)", $query_values->query);
 		$this->assertEquals([
 			'string'=> 'test',
-		], $values);
+		], $query_values->values);
 	}
 
 	public function testMakeQueryUpdate(){
 		$table_name = 'table';
 		$where = ['key'=> 1];
-		$values = [
+		$vals = [
 			'string'=> 'test',
 			'not'=> 'nope',
 		];
 		$include_keys = ['string'];
-		list($query, $values) = ExtendedPdo::makeQueryUpdate($table_name, $where, $values, $include_keys);
-		$this->assertEquals("UPDATE table SET `string` = :string WHERE key = :key", $query);
+
+		$query_values = ExtendedPdo::makeQueryUpdate($table_name, $where, $vals, $include_keys);
+
+		/** @noinspection SqlResolve */
+		$this->assertEquals("UPDATE `table` SET `string` = :string WHERE `key` = :key", $query_values->query);
 		$this->assertEquals([
 			'string'=> 'test',
 			'key'=> 1,
-		], $values);
+		], $query_values->values);
 	}
 
 	public function testMakeQueryUpdateWhereString(){
 		$table_name = 'table';
-		$where = 'key=1';
-		$values = [
+		$where = '`key`=1';
+		$vals = [
 			'string'=> 'test',
 			'not'=> 'nope',
 		];
 		$include_keys = ['string'];
-		list($query, $values) = ExtendedPdo::makeQueryUpdate($table_name, $where, $values, $include_keys);
-		$this->assertEquals("UPDATE table SET `string` = :string WHERE key=1", $query);
+
+		$query_values = ExtendedPdo::makeQueryUpdate($table_name, $where, $vals, $include_keys);
+
+		/** @noinspection SqlResolve */
+		$this->assertEquals("UPDATE `table` SET `string` = :string WHERE `key`=1", $query_values->query);
 		$this->assertEquals([
 			'string'=> 'test',
-		], $values);
+		], $query_values->values);
 	}
 
 	public function testMakeQueryUpdateWhere(){
@@ -63,6 +71,7 @@ class TestBasic extends PHPUnit_Framework_TestCase {
 			$key=> $value,
 		];
 		$values = $where;
+
 		$where_new = ExtendedPdo::makeQueryUpdateWhere($where, $values);
 
 		$collision_string = ExtendedPdo::$where_key_collision;
@@ -75,18 +84,21 @@ class TestBasic extends PHPUnit_Framework_TestCase {
 			'key'=> 1,
 			'string'=>'old string'
 		];
-		$values = [
+		$vals = [
 			'string'=> 'test',
 		];
 		$include_keys = ['string'];
 		$collision_string = ExtendedPdo::$where_key_collision;
-		list($query, $values) = ExtendedPdo::makeQueryUpdate($table_name, $where, $values, $include_keys);
-		$this->assertEquals("UPDATE table SET `string` = :string WHERE key = :key and string = :string$collision_string", $query);
+
+		$query_values = ExtendedPdo::makeQueryUpdate($table_name, $where, $vals, $include_keys);
+
+		/** @noinspection SqlResolve */
+		$this->assertEquals("UPDATE `table` SET `string` = :string WHERE `key` = :key and `string` = :string$collision_string", $query_values->query);
 		$this->assertEquals([
 			'string'=> 'test',
 			'key'=> 1,
 			'string'.$collision_string=> 'old string',
-		], $values);
+		], $query_values->values);
 	}
 
 	public function testWhereQuery(){
@@ -95,7 +107,7 @@ class TestBasic extends PHPUnit_Framework_TestCase {
 			'string'=> 'test',
 		];
 		$where_query = ExtendedPdo::whereQuery($where);
-		$this->assertEquals("id = :id and string = :string", $where_query);
+		$this->assertEquals("`id` = :id and `string` = :string", $where_query);
 	}
 
 	public function testWhereQueryString(){
@@ -112,7 +124,7 @@ class TestBasic extends PHPUnit_Framework_TestCase {
 			'bad'=> 'test'
 		];
 		$where_query = ExtendedPdo::whereQueryOperator($where, ['date'=> '>=', 'number'=> '<', 'unset'=> '<>' , 'bad'=> '']);
-		$this->assertEquals("id = :id and date >= :date and number < :number and bad = :bad", $where_query);
+		$this->assertEquals("`id` = :id and `date` >= :date and `number` < :number and `bad` = :bad", $where_query);
 	}
 
 	public function testMakeQueryValuesInsert(){
@@ -125,15 +137,17 @@ class TestBasic extends PHPUnit_Framework_TestCase {
 			'ignored'=> 'rawr',
 		];
 		$include_keys = ['id', 'string', 'empty', 'false', 'null', 'doesnt_exist'];
-		list($fields, $placeholders, $vals) = ExtendedPdo::makeQueryValues('insert', $values, $include_keys);
-		$this->assertEquals(['`id`', '`string`', '`empty`', '`null`'], $fields);
-		$this->assertEquals([':id', ':string', ':empty', ':null'], $placeholders);
+
+		$query_placeholders = ExtendedPdo::makeQueryValues('insert', $values, $include_keys);
+
+		$this->assertEquals(['`id`', '`string`', '`empty`', '`null`'], $query_placeholders->fields);
+		$this->assertEquals([':id', ':string', ':empty', ':null'], $query_placeholders->placeholders);
 		$this->assertEquals([
 			'id'=> 1,
 			'string'=> 'test',
 			'empty'=> '',
 			'null'=> '',
-		], $vals);
+		], $query_placeholders->vals);
 	}
 
 	public function testMakeQueryValuesUpdate(){
@@ -146,8 +160,10 @@ class TestBasic extends PHPUnit_Framework_TestCase {
 			'ignored'=> 'rawr',
 		];
 		$include_keys = ['id', 'string', 'empty', 'false', 'null'];
-		list($fields, $placeholders, $vals) = ExtendedPdo::makeQueryValues('update', $values, $include_keys);
-		$this->assertEquals(['`id` = :id', '`string` = :string', '`empty` = :empty', '`null` = :null'], $fields);
+
+		$query_placeholders = ExtendedPdo::makeQueryValues('update', $values, $include_keys);
+
+		$this->assertEquals(['`id` = :id', '`string` = :string', '`empty` = :empty', '`null` = :null'], $query_placeholders->fields);
 		// Placeholders should be the same as "testMakeQueryValuesInsert" AND are irrelevant for update
 		// Vals should be the same as "testMakeQueryValuesInsert"
 		$this->assertEquals([
@@ -155,7 +171,7 @@ class TestBasic extends PHPUnit_Framework_TestCase {
 			'string'=> 'test',
 			'empty'=> '',
 			'null'=> '',
-		], $vals);
+		], $query_placeholders->vals);
 	}
 
 	public function testSelectFromQuery(){
@@ -165,7 +181,8 @@ class TestBasic extends PHPUnit_Framework_TestCase {
 		];
 		$fields = '*';
 		$query = ExtendedPdo::selectFromQuery($table, $where, $fields);
-		$this->assertEquals("SELECT * FROM `test` WHERE id = :id", $query);
+		/** @noinspection SqlResolve */
+		$this->assertEquals("SELECT * FROM `test` WHERE `id` = :id", $query);
 	}
 
 	public function testSelectFromQueryFieldArray(){
@@ -175,7 +192,8 @@ class TestBasic extends PHPUnit_Framework_TestCase {
 		];
 		$fields = ['id', 'string'];
 		$query = ExtendedPdo::selectFromQuery($table, $where, $fields);
-		$this->assertEquals("SELECT id,string FROM `test` WHERE id = :id", $query);
+		/** @noinspection SqlResolve */
+		$this->assertEquals("SELECT `id`,`string` FROM `test` WHERE `id` = :id", $query);
 	}
 
 	public function testSelectFromQueryWhereString(){
@@ -183,7 +201,8 @@ class TestBasic extends PHPUnit_Framework_TestCase {
 		$where = "id = 1";
 		$fields = 'string';
 		$query = ExtendedPdo::selectFromQuery($table, $where, $fields);
-		$this->assertEquals("SELECT string FROM `test` WHERE id = 1", $query);
+		/** @noinspection SqlResolve */
+		$this->assertEquals("SELECT `string` FROM `test` WHERE id = 1", $query);
 	}
 
 	public function testExcludeKeys(){
@@ -222,22 +241,24 @@ class TestBasic extends PHPUnit_Framework_TestCase {
 
 	public function testDeleteQuery(){
 		$id = 1;
-		list($query, $where) = ExtendedPdo::deleteQuery('table', ['id'=> $id], 0);
-		$this->assertEquals("DELETE FROM `table` WHERE id = :id", $query);
-		$this->assertEquals(['id'=> $id], $where);
+		$query_values = ExtendedPdo::deleteQuery('table', ['id'=> $id], 0);
+		/** @noinspection SqlResolve */
+		$this->assertEquals("DELETE FROM `table` WHERE `id` = :id", $query_values->query);
+		$this->assertEquals(['id'=> $id], $query_values->values);
 	}
 
 	public function testDeleteQueryWithLimit(){
 		$id = 1;
 		$limit = 2;
-		list($query, $where) = ExtendedPdo::deleteQuery('table', ['id'=> $id], $limit);
-		$this->assertEquals("DELETE FROM `table` WHERE id = :id LIMIT :_limit", $query);
-		$this->assertEquals(['id'=> $id, '_limit'=> $limit], $where);
+		$query_values = ExtendedPdo::deleteQuery('table', ['id'=> $id], $limit);
+		/** @noinspection SqlResolve */
+		$this->assertEquals("DELETE FROM `table` WHERE `id` = :id LIMIT :_limit", $query_values->query);
+		$this->assertEquals(['id'=> $id, '_limit'=> $limit], $query_values->values);
 	}
 
 	public function testDeleteQueryNoWhere(){
 		try {
-			list($query, $where) = ExtendedPdo::deleteQuery('table', [], 0);
+			ExtendedPdo::deleteQuery('table', [], 0);
 			$this->assertTrue(false, 'The ExtendedPdoException was not thrown');
 		}
 		catch (ExtendedPdoException $e){
