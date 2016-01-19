@@ -290,7 +290,16 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 			if (!empty($operators[$key])){
 				$operator = $operators[$key];
 			}
-			$where_keys[] = "`$key` $operator :$key";
+			$key = explode('.', $key);
+			if (count($key)>1){
+				$pfx = $key[0].'.';
+				$key = $key[1];
+			}
+			else {
+				$pfx = '';
+				$key = $key[0];
+			}
+			$where_keys[] = "$pfx`$key` $operator :$key";
 		}
 		$where_query = implode(' and ', $where_keys);
 

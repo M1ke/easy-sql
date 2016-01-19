@@ -120,11 +120,11 @@ class TestExtendedPdo extends PHPUnit_Framework_TestCase {
 		$where = [
 			'id'=> 1,
 			'date'=> '2015-07-30',
-			'number'=> 6,
+			'a.number'=> 6,
 			'bad'=> 'test'
 		];
-		$where_query = ExtendedPdo::whereQueryOperator($where, ['date'=> '>=', 'number'=> '<', 'unset'=> '<>' , 'bad'=> '']);
-		$this->assertEquals("`id` = :id and `date` >= :date and `number` < :number and `bad` = :bad", $where_query);
+		$where_query = ExtendedPdo::whereQueryOperator($where, ['date'=> '>=', 'a.number'=> '<', 'unset'=> '<>' , 'bad'=> '']);
+		$this->assertEquals("`id` = :id and `date` >= :date and a.`number` < :number and `bad` = :bad", $where_query);
 	}
 
 	public function testMakeQueryValuesInsert(){
