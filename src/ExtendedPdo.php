@@ -541,11 +541,16 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 			throw new Exception('Delete commands must contain a WHERE component.', $query);
 		}
 		if (!empty($limit)){
-			$query .= " LIMIT :_limit";
-			$where['_limit'] = $limit;
+			if (is_array($where)){
+				$query .= " LIMIT :_limit";
+				$where['_limit'] = $limit;
+			}
+			else {
+				$query .= " LIMIT $limit";
+			}
 		}
 
-		return new ExtendedPdoQueryValues($query, $where);
+		return new ExtendedPdoQueryValues($query, is_array($where) ? $where : []);
 	}
 }
 

@@ -256,6 +256,15 @@ class TestExtendedPdo extends PHPUnit_Framework_TestCase {
 		$this->assertEquals(['id'=> $id, '_limit'=> $limit], $query_values->values);
 	}
 
+	public function testDeleteQueryStringWithLimit(){
+		$id = 1;
+		$limit = 2;
+		$query_values = ExtendedPdo::deleteQuery('table', "`status` <> 0", $limit);
+		/** @noinspection SqlResolve */
+		$this->assertEquals("DELETE FROM `table` WHERE `status` <> 0 LIMIT $limit", $query_values->query);
+		$this->assertEquals([], $query_values->values);
+	}
+
 	public function testDeleteQueryNoWhere(){
 		try {
 			ExtendedPdo::deleteQuery('table', [], 0);
