@@ -66,8 +66,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 	 * @return array
 	 */
 	public function fetchOne($statement, array $values = []){
-		$args = func_get_args();
-		$return = parent::fetchOne(...$args);
+		$return = parent::fetchOne($statement, $values);
 
 		return is_array($return) ? $return : [];
 	}
@@ -109,15 +108,13 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 	 *
 	 * Fetches one field from one row of the database as a scalar value.
 	 *
-	 * @param array $args
+	 * @param string $statement
+	 * @param array $values
+	 *
 	 * @return string
-	 * @internal param string $statement The SQL statement to prepare and execute.
-	 *
-	 * @internal param array $values Values to bind to the query.
-	 *
 	 */
-	public function fetchField(...$args){
-		$data = $this->fetchOne(...$args);
+	public function fetchField($statement, array $values = []){
+		$data = $this->fetchOne($statement, $values);
 		$value = is_array($data) ? reset($data) : '';
 
 		return $value;
