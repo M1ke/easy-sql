@@ -199,10 +199,10 @@ class TestExtendedPdo extends PHPUnit_Framework_TestCase {
 	public function testSelectFromQueryWhereString(){
 		$table = 'test';
 		$where = "id = 1";
-		$fields = 'string, id';
+		$fields = 't.string, id';
 		$query = ExtendedPdo::selectFromQuery($table, $where, $fields);
 		/** @noinspection SqlResolve */
-		$this->assertEquals("SELECT `string`,`id` FROM `test` WHERE id = 1", $query);
+		$this->assertEquals("SELECT t.`string`,`id` FROM `test` WHERE id = 1", $query);
 	}
 
 	public function testExcludeKeys(){

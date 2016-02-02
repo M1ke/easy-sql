@@ -287,20 +287,27 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 			if (!empty($operators[$key])){
 				$operator = $operators[$key];
 			}
-			$key = explode('.', $key);
-			if (count($key)>1){
-				$pfx = $key[0].'.';
-				$key = $key[1];
-			}
-			else {
-				$pfx = '';
-				$key = $key[0];
-			}
+
+			list($key, $pfx) = self::splitPrefix($key);
+
 			$where_keys[] = "$pfx`$key` $operator :$key";
 		}
 		$where_query = implode(' and ', $where_keys);
 
 		return $where_query;
+	}
+
+	protected static function splitPrefix($key){
+		$key = explode('.', $key);
+		if (count($key)>1){
+			$pfx = $key[0].'.';
+			$key = $key[1];
+		}
+		else {
+			$pfx = '';
+			$key = $key[0];
+		}
+		return [$key, $pfx];
 	}
 
 	/**
@@ -463,7 +470,8 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 		foreach ($fields as &$field){
 			$field = trim($field);
 			if (strpos($field, '*')===false){
-				$field = "`$field`";
+				list($key, $pfx) = self::splitPrefix($field);
+				$field = "$pfx`$key`";
 			}
 		}
 		$fields = implode(',', $fields);
