@@ -131,7 +131,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 	 * @return integer
 	 *
 	 */
-	public function performId($query, $values){
+	public function performId($query, array $values = []){
 		$this->perform($query, $values);
 
 		return $this->lastInsertId();
