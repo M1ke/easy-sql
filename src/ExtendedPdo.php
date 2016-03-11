@@ -152,18 +152,6 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 	}
 
 	/**
-	 * @param $table_name
-	 * @param array $values
-	 * @param array $include_keys
-	 * @return int
-	 *
-	 * @deprecated use insert()
-	 */
-	public function queryInsert($table_name, array $values, array $include_keys){
-		return $this->insert($table_name, $values, $include_keys);
-	}
-
-	/**
 	 * @param string $table_name
 	 * @param array $values
 	 * @param array $exclude_keys
@@ -173,18 +161,6 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 		$include_keys = self::excludeKeys($values, $exclude_keys);
 
 		return $this->insert($table_name, $values, $include_keys);
-	}
-
-	/**
-	 * @param $table_name
-	 * @param array $values
-	 * @param array $exclude_keys
-	 * @return int
-	 *
-	 * @deprecated use insertExc()
-	 */
-	public function queryInsertExc($table_name, array $values, array $exclude_keys = []){
-		return $this->insertExc($table_name, $values, $exclude_keys);
 	}
 
 	/**
@@ -201,15 +177,15 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 	}
 
 	/**
-	 * @param $table_name
-	 * @param $where
+	 * @param string $table_name
+	 * @param array|string $where
 	 * @param array $values
-	 * @param array $include_keys
+	 * @param array $exclude_keys
 	 * @return int
-	 *
-	 * @deprecated use update()
 	 */
-	public function queryUpdate($table_name, $where, array $values, array $include_keys){
+	public function updateExc($table_name, $where, array $values, array $exclude_keys = []){
+		$include_keys = self::excludeKeys($values, $exclude_keys);
+
 		return $this->update($table_name, $where, $values, $include_keys);
 	}
 
@@ -308,32 +284,6 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 			$key = $key[0];
 		}
 		return [$key, $pfx];
-	}
-
-	/**
-	 * @param string $table_name
-	 * @param array|string $where
-	 * @param array $values
-	 * @param array $exclude_keys
-	 * @return int
-	 */
-	public function updateExc($table_name, $where, array $values, array $exclude_keys = []){
-		$include_keys = self::excludeKeys($values, $exclude_keys);
-
-		return $this->update($table_name, $where, $values, $include_keys);
-	}
-
-	/**
-	 * @param $table_name
-	 * @param $where
-	 * @param array $values
-	 * @param array $exclude_keys
-	 * @return int
-	 *
-	 * @deprecated use updateExc()
-	 */
-	public function queryUpdateExc($table_name, $where, array $values, array $exclude_keys = []){
-		return $this->updateExc($table_name, $where, $values, $exclude_keys);
 	}
 
 	/**
