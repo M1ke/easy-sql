@@ -404,7 +404,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 		$fields = self::fieldFormat($fields);
 
 		/** @noinspection SqlResolve */
-		$query = "SELECT $fields FROM `$table` WHERE $where_query";
+		$query = "SELECT $fields FROM `$table`".(!empty($where_query) ? " WHERE $where_query" : '');
 
 		return $query;
 	}
