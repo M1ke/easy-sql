@@ -14,7 +14,7 @@ use PDOException;
  *
  */
 class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
-	public static $where_key_collision = '____';
+	const KEY_COLLISION = '____';
 
 	/**
 	 * ExtendedPdo constructor.
@@ -22,11 +22,17 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 	 * @param string $user
 	 * @param string $pass
 	 * @param array $options
+	 * @param string $charset
 	 * @param string $type
 	 * @param string $server
 	 */
-	public function __construct($db, $user, $pass, array $options = [], $type = 'mysql', $server = 'localhost'){
-		$dsn = $type . ':host=' . $server . ';dbname=' . $db;
+	public function __construct($db, $user, $pass, array $options = [], $charset = 'utf8', $type = 'mysql', $server = 'localhost'){
+		$dsn = "$type:host={$server};dbname={$db}";
+
+		if (!empty($charset)){
+			$dsn .= ";charset={$charset}";
+		}
+
 		parent::__construct($dsn, $user, $pass, $options);
 	}
 
@@ -221,7 +227,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 		$where_copy = [];
 		foreach ($where as $key => $val){
 			if (isset($values[$key])){
-				$key = $key . self::$where_key_collision;
+				$key = $key . self::KEY_COLLISION;
 			}
 			$where_copy[$key] = $val;
 		}
@@ -239,7 +245,7 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 			$where_keys = [];
 			foreach ($where as $key => $val){
 				$operator = '=';
-				$param_key = isset($values[$key]) ? ($key . self::$where_key_collision) : $key;
+				$param_key = isset($values[$key]) ? ($key . self::KEY_COLLISION) : $key;
 				$where_keys[] = "`$key` $operator :$param_key";
 			}
 			$where_query = implode(' and ', $where_keys);

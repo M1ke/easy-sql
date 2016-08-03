@@ -74,7 +74,7 @@ class TestExtendedPdo extends PHPUnit_Framework_TestCase {
 
 		$where_new = ExtendedPdo::makeQueryUpdateWhere($where, $values);
 
-		$collision_string = ExtendedPdo::$where_key_collision;
+		$collision_string = ExtendedPdo::KEY_COLLISION;
 		$this->assertEquals([$key.$collision_string=> $value], $where_new);
 	}
 
@@ -88,7 +88,7 @@ class TestExtendedPdo extends PHPUnit_Framework_TestCase {
 			'string'=> 'test',
 		];
 		$include_keys = ['string'];
-		$collision_string = ExtendedPdo::$where_key_collision;
+		$collision_string = ExtendedPdo::KEY_COLLISION;
 
 		$query_values = ExtendedPdo::makeQueryUpdate($table_name, $where, $vals, $include_keys);
 
@@ -230,13 +230,13 @@ class TestExtendedPdo extends PHPUnit_Framework_TestCase {
 	public function testDsnDefault(){
 		$extended_pdo = new ExtendedPdo('test', 'user', 'pass');
 		$dsn = $extended_pdo->getDsn();
-		$this->assertEquals('mysql:host=localhost;dbname=test', $dsn);
+		$this->assertEquals('mysql:host=localhost;dbname=test;charset=utf8', $dsn);
 	}
 
 	public function testDsnCustom(){
-		$extended_pdo = new ExtendedPdo('test', 'user', 'pass', [], 'sqlite', 'server.com');
+		$extended_pdo = new ExtendedPdo('test', 'user', 'pass', [], 'latin1', 'sqlite', 'server.com');
 		$dsn = $extended_pdo->getDsn();
-		$this->assertEquals('sqlite:host=server.com;dbname=test', $dsn);
+		$this->assertEquals('sqlite:host=server.com;dbname=test;charset=latin1', $dsn);
 	}
 
 	public function testDeleteQuery(){
