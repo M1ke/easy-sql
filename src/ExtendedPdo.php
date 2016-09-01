@@ -239,6 +239,9 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 			if (isset($values[$key])){
 				$key = $key . self::KEY_COLLISION;
 			}
+			if ($val===false){
+				$val = null;
+			}
 			$where_copy[$key] = $val;
 		}
 
@@ -403,6 +406,9 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 		if (!is_array($where)){
 			$where = [];
 		}
+		else {
+			$where = $this->removeFalseWhere($where);
+		}
 		$data = $this->$func($query, $where);
 
 		return $data;
@@ -522,6 +528,20 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 		}
 
 		return new ExtendedPdoQueryValues($query, is_array($where) ? $where : []);
+	}
+
+	/**
+	 * @param $where
+	 * @return array
+	 */
+	private function removeFalseWhere($where){
+		foreach ($where as $key => &$val){
+			if ($val===false){
+				$val = null;
+			}
+		}
+
+		return $where;
 	}
 }
 

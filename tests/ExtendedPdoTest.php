@@ -68,14 +68,15 @@ class TestExtendedPdo extends PHPUnit_Framework_TestCase {
 		$value = 'val';
 		$key = 'test';
 		$where = [
-			$key=> $value,
+			$key => $value,
 		];
 		$values = $where;
+		$where['falsey'] = false;
 
 		$where_new = ExtendedPdo::makeQueryUpdateWhere($where, $values);
 
 		$collision_string = ExtendedPdo::KEY_COLLISION;
-		$this->assertEquals([$key.$collision_string=> $value], $where_new);
+		$this->assertSame([$key.$collision_string=> $value, 'falsey' => null], $where_new);
 	}
 
 	public function testMakeQueryUpdateRepeatedField(){
