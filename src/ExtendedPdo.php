@@ -121,7 +121,17 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 	 */
 	public function fetchField($statement, array $values = []){
 		$data = $this->fetchOne($statement, $values);
-		$value = is_array($data) ? reset($data) : '';
+		$value = self::fetchFieldReturn($data);
+
+		return $value;
+	}
+
+	/**
+	 * @param $data
+	 * @return mixed|string
+	 */
+	public static function fetchFieldReturn($data){
+		$value = (is_array($data) && !empty($data)) ? reset($data) : '';
 
 		return $value;
 	}

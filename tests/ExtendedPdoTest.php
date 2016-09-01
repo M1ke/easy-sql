@@ -274,4 +274,22 @@ class TestExtendedPdo extends PHPUnit_Framework_TestCase {
 			$this->assertTrue(true);
 		}
 	}
+
+	public function testFetchFieldReturnArray(){
+		$val = ExtendedPdo::fetchFieldReturn(['test' => 'a']);
+
+		$this->assertSame('a', $val);
+	}
+
+	public function testFetchFieldReturn(){
+		$val = ExtendedPdo::fetchFieldReturn(null);
+
+		$this->assertSame('', $val);
+	}
+
+	public function testFetchFieldReturnArrayEmpty(){
+		$val = ExtendedPdo::fetchFieldReturn([]);
+
+		$this->assertSame('', $val);
+	}
 }
