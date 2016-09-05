@@ -194,6 +194,22 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 
 	/**
 	 * @param string $table_name
+	 * @param string|array $where
+	 * @param array $values
+	 * @param array $include_keys
+	 * @return int
+	 */
+	public function updateOne($table_name, $where, array $values, array $include_keys){
+		$query_values = self::makeQueryUpdate($table_name, $where, $values, $include_keys);
+
+		$query = $query_values->query;
+		$query .= " LIMIT 1";
+
+		return $this->fetchAffected($query, $query_values->values);
+	}
+
+	/**
+	 * @param string $table_name
 	 * @param array|string $where
 	 * @param array $values
 	 * @param array $exclude_keys
@@ -203,6 +219,19 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 		$include_keys = self::excludeKeys($values, $exclude_keys);
 
 		return $this->update($table_name, $where, $values, $include_keys);
+	}
+
+	/**
+	 * @param string $table_name
+	 * @param array|string $where
+	 * @param array $values
+	 * @param array $exclude_keys
+	 * @return int
+	 */
+	public function updateOneExc($table_name, $where, array $values, array $exclude_keys = []){
+		$include_keys = self::excludeKeys($values, $exclude_keys);
+
+		return $this->updateOne($table_name, $where, $values, $include_keys);
 	}
 
 	/**
