@@ -533,6 +533,16 @@ class ExtendedPdo extends AuraPdo implements ExtendedPdoInterface {
 	}
 
 	/**
+	 * @param string $table
+	 * @param array|string $where
+	 * @return int
+	 * @throws Exception
+	 */
+	public function deleteOne($table, $where){
+		return $this->delete($table, $where, 1);
+	}
+
+	/**
 	 * @param $table
 	 * @param $where
 	 * @param $limit
