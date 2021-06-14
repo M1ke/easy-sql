@@ -1,7 +1,5 @@
 <?php
 
-require __DIR__.'/_bootstrap.php';
-
 use M1ke\Sql\Exception as ExtendedPdoException;
 use M1ke\Sql\ExtendedPdo;
 use PHPUnit\Framework\TestCase;
