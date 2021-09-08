@@ -70,7 +70,6 @@ class ExtendedPdo extends AuraPdo {
 	 * @param string $statement
 	 * @psalm-param array<string, ?scalar|list<scalar>> $values
 	 * @return array
-	 * @psalm-return array|empty
 	 */
 	public function fetchOne($statement, array $values = []){
 		$return = parent::fetchOne($statement, $values);
@@ -505,9 +504,9 @@ class ExtendedPdo extends AuraPdo {
 	 * @param string $table
 	 * @param string|array $where
 	 * @psalm-param string|array<string, scalar> $where
-	 * @param string $fields
+	 * @param string|array $fields
+	 * @psalm-param string|list<string> $fields
 	 * @return array
-	 * @psalm-return array|empty
 	 */
 	public function selectOne($table, $where, $fields = "*"){
 		return $this->selectFrom($table, $where, 'one', $fields);
