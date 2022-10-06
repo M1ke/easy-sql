@@ -2,6 +2,7 @@
     "name": "m1ke/easy-sql",
     "description": "Builds on Aura's ExtendedPdo to add database manipulation helpers and persistent connections",
     "license": "BSD-2-Clause",
+    "type": "library",
     "authors": [
         {
             "name": "M1ke",
@@ -9,8 +10,9 @@
         }
     ],
     "require": {
-        "php": ">=7.2",
-        "aura/sql": "^2.4.3"
+        "php": "^7.4|^8.0",
+        "ext-pdo": "*",
+        "aura/sql": "^3.1"
     },
     "require-dev": {
         "m1ke/git-php-lint": "1.0.0",

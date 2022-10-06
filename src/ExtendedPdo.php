@@ -4,6 +4,7 @@ namespace M1ke\Sql;
 use Aura\Sql\ExtendedPdo as AuraPdo;
 
 use PDOException;
+use PDOStatement;
 
 /**
  *
@@ -12,20 +13,21 @@ use PDOException;
  * @package M1ke.Sql
  *
  */
-class ExtendedPdo extends AuraPdo {
-	/** @internal */
-	public const KEY_COLLISION = '____';
+class ExtendedPdo extends AuraPdo{
+    /** @internal */
+    public const KEY_COLLISION = '____';
 
-	/**
-	 * ExtendedPdo constructor.
-	 * @param string $db
-	 * @param string $user
-	 * @param string $pass
-	 * @param string $charset
-	 * @param string $type
-	 * @param string $server
-	 */
-	public function __construct($db, $user, $pass, array $options = [], $charset = 'utf8', $type = 'mysql', $server = 'localhost'){
+    /**
+     * ExtendedPdo constructor.
+     * @param string $db
+     * @param string $user
+     * @param string $pass
+     * @param array $options
+     * @param string $charset
+     * @param string $type
+     * @param string $server
+     */
+	public function __construct(string $db, string $user, string $pass, array $options = [], string $charset = 'utf8', string $type = 'mysql', string $server = 'localhost'){
 		$dsn = "$type:host={$server};dbname={$db}";
 
 		if (!empty($charset)){
@@ -35,13 +37,17 @@ class ExtendedPdo extends AuraPdo {
 		parent::__construct($dsn, $user, $pass, $options);
 	}
 
+
+    public function getDsn(): string {
+        return $this->args[0];
+    }
+
 	/**
-	 * @psalm-param array<string, scalar> $values
-	 * @psalm-param list<string> $exclude_keys
-	 * @return array
-	 * @psalm-return list<string>
+	 * @param array<string, scalar> $values
+	 * @param list<string> $exclude_keys
+	 * @return list<string>
 	 */
-	public static function excludeKeys(array $values, array $exclude_keys){
+	public static function excludeKeys(array $values, array $exclude_keys):array{
 		$include_keys = array_keys($values);
 		foreach ($include_keys as $n => $key){
 			if (in_array($key, $exclude_keys)){
@@ -52,26 +58,65 @@ class ExtendedPdo extends AuraPdo {
 		return $include_keys;
 	}
 
-	/**
-	 * @param string $fetch_type
-	 * @param string $statement
-	 * @psalm-param array<string, ?scalar|list<scalar>> $values
-	 * @param ?callable $callable
-	 * @return array
-	 */
-	protected function fetchAllWithCallable($fetch_type, $statement, array $values = [], $callable = null){
-		$args = func_get_args();
-		$return = parent::fetchAllWithCallable(...$args);
+    /**
+     * Fetches a sequential array of rows from the database; the rows
+     * are returned as associative arrays.
+     *
+     * @param string $statement The SQL statement to prepare and execute.
+     * @param array<string, ?scalar|list<scalar>> $values
+     * @param callable|null $callable $callable A callable to be applied to each of the rows to be returned.
+     *
+     * @return array
+     * @throws Exception
+     */
+    public function fetchAll($statement, array $values = [], callable $callable = null ):array{
+        return $this->fetchAllWithCallable(self::FETCH_ASSOC, $statement, $values, $callable);
+    }
 
-		return is_array($return) ? $return : [];
+    /**
+     * @param int $fetch_type
+     * @param string $statement
+     * @param array<string, ?scalar|list<scalar>> $values
+     * @param callable|null $callable
+     * @return array
+     * @throws Exception
+     */
+	protected function fetchAllWithCallable(int $fetch_type, string $statement, array $values = [], callable $callable = null):array{
+        $sth = $this->perform($statement, $values);
+        if ($fetch_type === self::FETCH_COLUMN) {
+            $data = $sth->fetchAll($fetch_type, 0);
+        } else {
+            $data = $sth->fetchAll($fetch_type);
+        }
+        if ($callable) {
+            foreach ($data as $key => $row) {
+                $data[$key] = call_user_func($callable, $row);
+            }
+        }
+		return is_array($data) ? $data : [];
 	}
 
+
+    /**
+     * Fetches the first column of rows as a sequential array.
+     * @param string $statement The SQL statement to prepare and execute.
+     * @param array<string, ?scalar|list<scalar>> $values
+     * @param callable|null $callable $callable A callable to be applied to each of the rows
+     * to be returned.
+     *
+     * @return array
+     * @throws Exception
+     */
+    public function fetchCol($statement, array $values = [], callable $callable = null):array{
+        return $this->fetchAllWithCallable(self::FETCH_COLUMN, $statement, $values, $callable);
+    }
+
 	/**
 	 * @param string $statement
-	 * @psalm-param array<string, ?scalar|list<scalar>> $values
+	 * @param array<string, ?scalar|list<scalar>> $values
 	 * @return array
 	 */
-	public function fetchOne($statement, array $values = []){
+	public function fetchOne($statement, array $values = []): array {
 		$return = parent::fetchOne($statement, $values);
 
 		return is_array($return) ? $return : [];
@@ -87,17 +132,14 @@ class ExtendedPdo extends AuraPdo {
 	 * row with that value will override earlier rows.
 	 *
 	 * @param string $statement
-	 * @psalm-param array<string, ?scalar|list<scalar>> $values
-	 *
+	 * @param array<string, ?scalar|list<scalar>> $values
 	 * @param ?callable $callable
 	 * @param ?string $key_field
-	 *
 	 * @return array
-	 * @psalm-return array<string, array>
-	 *
 	 * @throws Exception
 	 */
-	public function fetchAssoc($statement, array $values = [], $callable = null, $key_field = ''){
+	public function fetchAssoc($statement, array $values = [], callable $callable = null, string $key_field = ''): array
+    {
 		$stmt = $this->perform($statement, $values);
 
 		$data = [];
@@ -112,40 +154,66 @@ class ExtendedPdo extends AuraPdo {
 		return $data;
 	}
 
+    /**
+     * @param $statement
+     * @param array $values
+     * @param callable|null $callable
+     * @return array|false
+     * @throws Exception
+     */
+    public function fetchPairs(
+        $statement,
+        array $values = [],
+        callable $callable = null
+    ) {
+        $sth = $this->perform($statement, $values);
+        if ($callable) {
+            $data = [];
+            while ($row = $sth->fetch(self::FETCH_NUM)) {
+                // apply the callback first so the key can be modified
+                $row = call_user_func($callable, $row);
+                // now retain the data
+                $data[$row[0]] = $row[1];
+            }
+        } else {
+            $data = $sth->fetchAll(self::FETCH_KEY_PAIR);
+        }
+        return $data;
+    }
+
 	/**
 	 * Fetches one field from one row of the database as a scalar value.
 	 *
 	 * @param string $statement
-	 * @psalm-param array<string, ?scalar|list<scalar>> $values
+	 * @param array<string, ?scalar|list<scalar>> $values
 	 *
-	 * @return string
+	 * @return string|false
 	 */
-	public function fetchField($statement, array $values = []){
+	public function fetchField(string $statement, array $values = []){
 		$data = $this->fetchOne($statement, $values);
 
 		return self::fetchFieldReturn($data);
 	}
 
 	/**
-	 * @param array $data
+	 * @param ?array $data
 	 * @return mixed|string
 	 */
-	public static function fetchFieldReturn($data){
-		return (is_array($data) && !empty($data)) ? reset($data) : '';
+	public static function fetchFieldReturn(?array $data){
+		return (!empty($data)) ? reset($data) : '';
 	}
 
-	/**
-	 *
-	 * Performs a query and then returns the last inserted ID
-	 *
-	 * @param string $query The SQL statement to prepare and execute.
-	 * @psalm-param array<string, ?scalar> $values
-	 *
-	 * @return int
-	 *
-	 * @throws Exception
-	 */
-	public function performId($query, array $values = []){
+    /**
+     *
+     * Performs a query and then returns the last inserted ID
+     *
+     * @param string $query The SQL statement to prepare and execute.
+     * @param array<string, ?scalar> $values
+     * @return string|false
+     *
+     * @throws Exception
+     */
+	public function performId(string $query, array $values = []){
 		$this->perform($query, $values);
 
 		return $this->lastInsertId();
@@ -153,12 +221,12 @@ class ExtendedPdo extends AuraPdo {
 
 	/**
 	 * @param string $table_name
-	 * @psalm-param array<string, scalar> $values
-	 * @psalm-param list<string> $include_keys
-	 * @return int
+	 * @param array<string, scalar> $vals
+	 * @param list<string> $include_keys
+	 * @return string|false
 	 * @throws Exception
 	 */
-	public function insert($table_name, array $vals, array $include_keys){
+	public function insert(string $table_name, array $vals, array $include_keys){
 		$query_values = self::makeQueryInsert($vals, $include_keys);
 		/** @noinspection SqlResolve */
 		$query = "INSERT INTO `$table_name` " . $query_values->query;
@@ -166,14 +234,14 @@ class ExtendedPdo extends AuraPdo {
 		return $this->performId($query, $query_values->values);
 	}
 
-	/**
-	 * @param string $table_name
-	 * @psalm-param array<string, scalar> $values
-	 * @psalm-param list<string> $exclude_keys
-	 * @return int
-	 * @throws Exception
-	 */
-	public function insertExc($table_name, array $values, array $exclude_keys = []){
+    /**
+     * @param string $table_name
+     * @param array<string, scalar> $values
+     * @param list<string> $exclude_keys
+     * @return string|false
+     * @throws Exception
+     */
+	public function insertExc(string $table_name, array $values, array $exclude_keys = []){
 		$include_keys = self::excludeKeys($values, $exclude_keys);
 
 		return $this->insert($table_name, $values, $include_keys);
@@ -181,13 +249,12 @@ class ExtendedPdo extends AuraPdo {
 
 	/**
 	 * @param string $table_name
-	 * @param string|array $where
-	 * @psalm-param string|array<string, scalar> $where
-	 * @psalm-param array<string, scalar> $vals
-	 * @psalm-param list<string> $include_keys
+	 * @param string|array<string, scalar> $where
+	 * @param array<string, scalar> $values
+	 * @param list<string> $include_keys
 	 * @return int
 	 */
-	public function update($table_name, $where, array $values, array $include_keys){
+	public function update(string $table_name, $where, array $values, array $include_keys):int{
 		$query_values = self::makeQueryUpdate($table_name, $where, $values, $include_keys);
 
 		return $this->fetchAffected($query_values->query, $query_values->values);
@@ -195,13 +262,12 @@ class ExtendedPdo extends AuraPdo {
 
 	/**
 	 * @param string $table_name
-	 * @param string|array $where
-	 * @psalm-param string|array<string, scalar> $where
-	 * @psalm-param array<string, scalar> $vals
-	 * @psalm-param list<string> $include_keys
+	 * @param string|array<string, scalar> $where
+	 * @param array<string, scalar> $values
+	 * @param list<string> $include_keys
 	 * @return int
 	 */
-	public function updateOne($table_name, $where, array $values, array $include_keys){
+	public function updateOne(string $table_name, $where, array $values, array $include_keys):int{
 		$query_values = self::makeQueryUpdate($table_name, $where, $values, $include_keys);
 
 		$query = $query_values->query;
@@ -213,11 +279,11 @@ class ExtendedPdo extends AuraPdo {
 	/**
 	 * @param string $table_name
 	 * @param array|string $where
-	 * @psalm-param array<string, scalar> $values
-	 * @psalm-param list<string> $exclude_keys
+	 * @param array<string, scalar> $values
+	 * @param list<string> $exclude_keys
 	 * @return int
 	 */
-	public function updateExc($table_name, $where, array $values, array $exclude_keys = []){
+	public function updateExc(string $table_name, $where, array $values, array $exclude_keys = []):int{
 		$include_keys = self::excludeKeys($values, $exclude_keys);
 
 		return $this->update($table_name, $where, $values, $include_keys);
@@ -226,11 +292,11 @@ class ExtendedPdo extends AuraPdo {
 	/**
 	 * @param string $table_name
 	 * @param array|string $where
-	 * @psalm-param array<string, scalar> $values
-	 * @psalm-param list<string> $exclude_keys
+	 * @param array<string, scalar> $values
+	 * @param list<string> $exclude_keys
 	 * @return int
 	 */
-	public function updateOneExc($table_name, $where, array $values, array $exclude_keys = []){
+	public function updateOneExc(string $table_name, $where, array $values, array $exclude_keys = []):int{
 		$include_keys = self::excludeKeys($values, $exclude_keys);
 
 		return $this->updateOne($table_name, $where, $values, $include_keys);
@@ -238,13 +304,12 @@ class ExtendedPdo extends AuraPdo {
 
 	/**
 	 * @param string $table_name
-	 * @param string|array $where
-	 * @psalm-param string|array<string, scalar> $where
-	 * @psalm-param array<string, scalar> $vals
-	 * @psalm-param list<string> $include_keys
+	 * @param string|array<string, scalar> $where
+	 * @param array<string, scalar> $vals
+	 * @param list<string> $include_keys
 	 * @return ExtendedPdoQueryValues
 	 */
-	public static function makeQueryUpdate($table_name, $where, array $vals, array $include_keys){
+	public static function makeQueryUpdate(string $table_name, $where, array $vals, array $include_keys):ExtendedPdoQueryValues{
 		$query_values = self::makeQueryUpdateComponents($vals, $include_keys);
 		$values = $query_values->values;
 
@@ -261,12 +326,11 @@ class ExtendedPdo extends AuraPdo {
 	}
 
 	/**
-	 * @psalm-param array<string, scalar> $where
-	 * @psalm-param array<string, ?scalar> $values
-	 * @return array
-	 * @psalm-return array<string, ?scalar>
+	 * @param array<string, scalar> $where
+	 * @param array<string, ?scalar> $values
+	 * @return array<string, ?scalar>
 	 */
-	public static function makeQueryUpdateWhere(array $where, array $values){
+	public static function makeQueryUpdateWhere(array $where, array $values):array{
 		$where_copy = [];
 		foreach ($where as $key => $val){
 			if (isset($values[$key])){
@@ -282,13 +346,11 @@ class ExtendedPdo extends AuraPdo {
 	}
 
 	/**
-	 * @param string|array $where
-	 * @psalm-param string|array<string, scalar> $where
-	 * @param array $values
-	 * @psalm-param array<string, ?scalar> $values
+	 * @param string|array<string, scalar> $where
+	 * @param array<string, ?scalar> $values
 	 * @return string
 	 */
-	public static function whereQuery($where, $values = []){
+	public static function whereQuery($where, array $values = []):string{
 		if (is_array($where)){
 			$where_keys = [];
 			foreach ($where as $key => $val){
@@ -305,10 +367,12 @@ class ExtendedPdo extends AuraPdo {
 		return $where_query;
 	}
 
-	/**
-	 * @return string
-	 */
-	public static function whereQueryOperator(array $where, array $operators){
+    /**
+     * @param array<string, scalar> $where
+     * @param array<string, scalar> $operators
+     * @return string
+     */
+	public static function whereQueryOperator(array $where, array $operators):string{
 		$where_keys = [];
 		foreach ($where as $key => $val){
 			$operator = '=';
@@ -326,9 +390,9 @@ class ExtendedPdo extends AuraPdo {
 
 	/**
 	 * @param string $key
-	 * @psalm-return array{non-empty-string, string}
+	 * @return array{non-empty-string, string}
 	 */
-	protected static function splitPrefix($key): array{
+	protected static function splitPrefix(string $key): array{
 		$parts = explode('.', $key);
 		if (count($parts)>1){
 			$pfx = $parts[0].'.';
@@ -342,11 +406,11 @@ class ExtendedPdo extends AuraPdo {
 	}
 
 	/**
-	 * @psalm-param array<string, scalar> $values
-	 * @psalm-param list<string> $include_keys
+	 * @param array<string, scalar> $values
+	 * @param list<string> $include_keys
 	 * @return ExtendedPdoQueryValues
 	 */
-	public static function makeQueryInsert(array $values, array $include_keys){
+	public static function makeQueryInsert(array $values, array $include_keys):ExtendedPdoQueryValues{
 		$query_placeholders = self::makeQueryValues('insert', $values, $include_keys);
 		$query = "(" . implode(', ', $query_placeholders->fields) . ") VALUES (" . implode(',', $query_placeholders->placeholders) . ")";
 
@@ -354,11 +418,11 @@ class ExtendedPdo extends AuraPdo {
 	}
 
 	/**
-	 * @psalm-param array<string, ?scalar> $values
-	 * @psalm-param list<string> $include_keys
+	 * @param array<string, ?scalar> $values
+	 * @param list<string> $include_keys
 	 * @return ExtendedPdoQueryValues
 	 */
-	public static function makeQueryUpdateComponents(array $values, array $include_keys){
+	public static function makeQueryUpdateComponents(array $values, array $include_keys):ExtendedPdoQueryValues{
 		$query_placeholders = self::makeQueryValues('update', $values, $include_keys);
 		$query = implode(', ', $query_placeholders->fields);
 
@@ -367,18 +431,18 @@ class ExtendedPdo extends AuraPdo {
 
 	/**
 	 * @param string $type
-	 * @psalm-type 'insert'|'update' $type
-	 * @psalm-param array<string, ?scalar> $values
-	 * @psalm-param list<string> $include_keys
+	 * @type 'insert'|'update' $type
+	 * @param array<string, ?scalar> $values
+	 * @param list<string> $include_keys
 	 * @return ExtendedPdoQueryPlaceholders
 	 */
-	public static function makeQueryValues($type, array $values, array $include_keys){
+	public static function makeQueryValues(string $type, array $values, array $include_keys):ExtendedPdoQueryPlaceholders{
 		$fields = $placeholders = $vals = [];
 		$values_keys = array_keys($values);
 
 		foreach ($include_keys as $key){
 			$key = trim($key);
-			$val = $values[$key];
+			$val = $values[$key]??null;
 			$key_is_set = in_array($key, $values_keys);
 			$value_isnt_false = $val!==false;
 			$key_has_no_dash = strpos($key, '-')===false;
@@ -397,27 +461,27 @@ class ExtendedPdo extends AuraPdo {
 
 	/**
 	 * @param string $statement
-	 * @psalm-param array<string, ?scalar> $values
-	 * @return \PDOStatement
+	 * @param  array<string, ?scalar|list<scalar>> $values
+	 * @return PDOStatement
 	 * @throws Exception
 	 */
-	public function perform($statement, array $values = []){
+	public function perform($statement, array $values = []):PDOStatement{
 		$sth = $this->prepareWithValues($statement, $values);
-		$this->beginProfile(__FUNCTION__);
+        $this->profiler->start(__FUNCTION__);
 		try {
 			$sth->execute();
 		}
 		catch (PDOException $e) {
 			throw new Exception($e->getMessage(), $sth->queryString);
 		}
-		$this->endProfile($statement, $values);
+		$this->profiler->finish($statement, $values);
 
 		return $sth;
 	}
 
 	// We actually might not need this, as ExtendedPdo can fill
 	//  in arrays for us as part of its "prepare" process
-	public static function prepareList(array $arr = []): string{
+	public static function prepareList(array $arr = []): string {
 		$count = count($arr);
 		$list = [];
 		for ($n = 0; $n<$count; $n++){
@@ -431,15 +495,14 @@ class ExtendedPdo extends AuraPdo {
 	 * We don't typehint the $where value because it can be a manually typed
 	 * string for things such as > < between etc.
 	 * @param string $table
-	 * @param string|array $where
-	 * @psalm-param string|array<string, scalar> $where
+	 * @param string|array<string, scalar> $where
 	 * @param string $type
 	 * @psalm-type 'one'|'assoc'|'all'|'field' $type
-	 * @param string|array $fields
-	 * @psalm-param string|list<string> $fields
+	 * @param string|list<string> $fields
 	 * @return array|string
+	 * @psalm-return ($type is 'field' ? string : array)
 	 */
-	public function selectFrom($table, $where, $type = 'one', $fields = "*"){
+	public function selectFrom(string $table, $where, string $type = 'one', $fields = "*"){
 		$query = self::selectFromQuery($table, $where, $fields);
 		$func = 'fetch' . ucfirst($type);
 		// if we had a string $where, pass on an empty array as where
@@ -455,13 +518,11 @@ class ExtendedPdo extends AuraPdo {
 
 	/**
 	 * @param string $table
-	 * @param string|array $where
-	 * @psalm-param string|array<string, scalar> $where
-	 * @param string|array $fields
-	 * @psalm-param string|list<string> $fields
+	 * @param string|array<string, scalar> $where
+	 * @param string|list<string> $fields
 	 * @return string
 	 */
-	public static function selectFromQuery($table, $where, $fields){
+	public static function selectFromQuery(string $table, $where, $fields):string{
 		$where_query = self::whereQuery($where);
 
 		$fields = self::fieldFormat($fields);
@@ -471,11 +532,10 @@ class ExtendedPdo extends AuraPdo {
 	}
 
 	/**
-	 * @param string|array $fields
-	 * @psalm-param string|list<string> $fields
+	 * @param string|list<string> $fields
 	 * @return string
 	 */
-	private static function fieldFormat($fields){
+	private static function fieldFormat($fields):string{
 		if (!is_array($fields)){
 			$fields = explode(',', $fields);
 		}
@@ -492,58 +552,51 @@ class ExtendedPdo extends AuraPdo {
 
 	/**
 	 * @param string $table
-	 * @param string|array $where
-	 * @psalm-param string|array<string, scalar> $where
+	 * @param string|array<string, scalar> $where
 	 * @return int
 	 */
-	public function selectCount($table, $where){
+	public function selectCount(string $table, $where):int{
 		return (int) $this->selectFrom($table, $where, 'field', ['count(*)']);
 	}
 
 	/**
 	 * @param string $table
-	 * @param string|array $where
-	 * @psalm-param string|array<string, scalar> $where
-	 * @param string|array $fields
-	 * @psalm-param string|list<string> $fields
+	 * @param string|array<string, scalar> $where
+	 * @param string|list<string> $fields
 	 * @return array
 	 */
-	public function selectOne($table, $where, $fields = "*"){
+	public function selectOne(string $table, $where, $fields = "*"){
 		return $this->selectFrom($table, $where, 'one', $fields);
 	}
 
 	/**
 	 * @param string $table
-	 * @param string|array $where
-	 * @psalm-param string|array<string, scalar> $where
-	 * @param string $fields
-	 * @return array
-	 * @psalm-return list<array>
+	 * @param string|array<string, scalar> $where
+	 * @param array|string $fields
+	 * @return list<array>
 	 */
-	public function selectAll($table, $where, $fields = "*"){
+	public function selectAll(string $table, $where, $fields = "*"){
 		return $this->selectFrom($table, $where, 'all', $fields);
 	}
 
 	/**
 	 * @param string $table
-	 * @param string|array $where
-	 * @psalm-param string|array<string, scalar> $where
-	 * @param string $field
+	 * @param string|array<string, scalar> $where
+	 * @param array|string $field
 	 * @return string
 	 */
-	public function selectField($table, $where, $field){
+	public function selectField(string $table, $where, $field):string{
 		return $this->selectFrom($table, $where, 'field', $field);
 	}
 
 	/**
 	 * @param string $table
-	 * @param string|array $where
-	 * @psalm-param string|array<string, scalar> $where
+	 * @param string|array<string, scalar> $where
 	 * @param ?int $limit
 	 * @return int
 	 * @throws Exception
 	 */
-	public function delete($table, $where, $limit = null){
+	public function delete(string $table, $where, ?int $limit = null):int{
 		$query_values = self::deleteQuery($table, $where, $limit);
 
 		return $this->fetchAffected($query_values->query, $query_values->values);
@@ -551,24 +604,22 @@ class ExtendedPdo extends AuraPdo {
 
 	/**
 	 * @param string $table
-	 * @param string|array $where
-	 * @psalm-param string|array<string, scalar> $where
+	 * @param string|array<string, scalar> $where
 	 * @return int
 	 * @throws Exception
 	 */
-	public function deleteOne($table, $where){
+	public function deleteOne(string $table, $where):int{
 		return $this->delete($table, $where, 1);
 	}
 
 	/**
 	 * @param string $table
-	 * @param string|array $where
-	 * @psalm-param string|array<string, scalar> $where
-	 * @param int $limit
+	 * @param string|array<string, scalar> $where
+	 * @param ?int $limit
 	 * @return ExtendedPdoQueryValues
 	 * @throws Exception
 	 */
-	public static function deleteQuery($table, $where, $limit){
+	public static function deleteQuery(string $table, $where, ?int $limit = null):ExtendedPdoQueryValues{
 		$where_query = self::whereQuery($where);
 		/** @noinspection SqlResolve */
 		$query = "DELETE FROM `$table` WHERE $where_query";
@@ -590,10 +641,8 @@ class ExtendedPdo extends AuraPdo {
 
 	/**
 	 * @template T of array<string, scalar>
-	 * @param array $where
-	 * @psalm-param T $where
-	 * @return array
-	 * @psalm-return T
+	 * @param T $where
+	 * @return T
 	 */
 	private function removeFalseWhere($where){
 		foreach ($where as &$val){
@@ -613,26 +662,17 @@ class ExtendedPdo extends AuraPdo {
  * Acts as a hintable return type for makeQueryValues
  */
 class ExtendedPdoQueryPlaceholders {
-	/**
-	 * @var array
-	 * @psalm-var list<string>
-	 */
-	public $fields;
-	/**
-	 * @var array
-	 * @psalm-var list<string>
-	 */
-	public $placeholders;
-	/**
-	 * @var array
-	 * @psalm-var array<string, ?scalar>
-	 */
-	public $vals;
+    /** @var list<string>  */
+	public array $fields;
+    /** @var list<string>  */
+	public array $placeholders;
+    /** @var array<string, ?scalar> */
+	public array $vals;
 
 	/**
-	 * @psalm-param list<string> $fields
-	 * @psalm-param list<string> $placeholders
-	 * @psalm-param array<string, ?scalar> $vals
+	 * @param list<string> $fields
+	 * @param list<string> $placeholders
+	 * @param array<string, ?scalar> $vals
 	 */
 	public function __construct(array $fields, array $placeholders, array $vals){
 		$this->fields = $fields;
@@ -648,22 +688,17 @@ class ExtendedPdoQueryPlaceholders {
  * Acts as a hintable return type for query/value mixed generation
  */
 class ExtendedPdoQueryValues {
-	/**
-	 * @var string
-	 */
-	public $query;
-	/**
-	 * @var array
-	 * @psalm-var array<string, ?scalar>
-	 */
-	public $values;
+
+	public string $query;
+    /** @var array<string, ?scalar> */
+	public array $values = [];
 
 	/**
 	 * ExtendedPdoQueryValues constructor.
 	 * @param string $query
-	 * @psalm-param array<string, ?scalar> $values
+	 * @param array<string, ?scalar> $values
 	 */
-	public function __construct($query, array $values = []){
+	public function __construct(string $query, array $values = []){
 		$this->query = $query;
 		$this->values = $values;
 	}
