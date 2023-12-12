@@ -28,7 +28,11 @@ class ExtendedPdo extends AuraPdo{
      * @param string $server
      */
 	public function __construct(string $db, string $user, string $pass, array $options = [], string $charset = 'utf8', string $type = 'mysql', string $server = 'localhost'){
-		$dsn = "$type:host={$server};dbname={$db}";
+		if ($type==='sqlite' && $server==='memory') {
+			$dsn = "sqlite::memory:";
+		} else {
+			$dsn = "$type:host={$server};dbname={$db}";
+		}
 
 		if (!empty($charset)){
 			$dsn .= ";charset={$charset}";
@@ -583,9 +587,9 @@ class ExtendedPdo extends AuraPdo{
 	 * @param string $table
 	 * @param string|array<string, scalar> $where
 	 * @param array|string $field
-	 * @return string
+	 * @return ?string
 	 */
-	public function selectField(string $table, $where, $field):string{
+	public function selectField(string $table, $where, $field):?string{
 		return $this->selectFrom($table, $where, 'field', $field);
 	}
 

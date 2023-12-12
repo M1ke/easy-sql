@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 use M1ke\Sql\Exception as ExtendedPdoException;
 use M1ke\Sql\ExtendedPdo;
@@ -291,5 +291,26 @@ class TestExtendedPdo extends TestCase {
 		$val = ExtendedPdo::fetchFieldReturn([]);
 
 		self::assertSame('', $val);
+	}
+
+	public function testSelectField(){
+		$pdo = new ExtendedPdo('', '', '', [], '', 'sqlite', 'memory');
+		$pdo->exec('create table testTable (testId INTEGER, name varchar, nullable varchar)');
+		$pdo->exec('insert into testTable values (1, \'a\', null)');
+		$result = $pdo->selectField('testTable', [
+			'name' => 'a',
+		], 'testId');
+
+		self::assertSame('1', $result);
+		$result = $pdo->selectField('testTable', [
+			'name' => 'b',
+		], 'testId');
+
+		self::assertSame('', $result);
+		$result = $pdo->selectField('testTable', [
+			'name' => 'a',
+		], 'nullable');
+
+		self::assertNull($result);
 	}
 }
